@@ -1,0 +1,28 @@
+# dependencies
+/node_modules
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# env
+.env
+.env*.local
+
+# local postgres data directory (see docker-compose.yml for the real deploy path)
+/.pgdata/
+logfile
+
+# testing
+/coverage
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
