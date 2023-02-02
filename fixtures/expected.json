@@ -1,0 +1,14 @@
+[
+  { "file": "vulnerable/reentrant-vault.sol", "expectedRuleIds": ["reentrancy-state-change-after-call", "unchecked-low-level-call"] },
+  { "file": "vulnerable/backdoor-auth.sol", "expectedRuleIds": ["tx-origin-authorization", "unprotected-selfdestruct"] },
+  { "file": "vulnerable/proxy-hijack.sol", "expectedRuleIds": ["delegatecall-to-untrusted-target"] },
+  { "file": "vulnerable/lottery.sol", "expectedRuleIds": ["timestamp-dependence", "weak-randomness-source"] },
+  { "file": "vulnerable/payout-loop.sol", "expectedRuleIds": ["unbounded-loop-external-call"] },
+  { "file": "vulnerable/ownership-setter.sol", "expectedRuleIds": ["missing-zero-address-check"] },
+  { "file": "safe/vault-guarded.sol", "expectedRuleIds": [] },
+  { "file": "safe/access-controlled.sol", "expectedRuleIds": [] },
+  { "file": "safe/fixed-proxy.sol", "expectedRuleIds": [] },
+  { "file": "safe/seeded-lottery.sol", "expectedRuleIds": [] },
+  { "file": "safe/pull-payment.sol", "expectedRuleIds": [] },
+  { "file": "safe/checked-setter.sol", "expectedRuleIds": [] }
+]
