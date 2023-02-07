@@ -1,0 +1,47 @@
+name: "Warden Security Scan"
+description: "Static analysis for Solidity smart contracts - blocks CI on critical findings."
+branding:
+  icon: "shield"
+  color: "blue"
+
+inputs:
+  path:
+    description: "File or directory to scan"
+    required: false
+    default: "."
+  fail-on:
+    description: "Minimum severity that fails the build (critical|high|medium|low|info)"
+    required: false
+    default: "critical"
+  repo:
+    description: "Repo slug to upload results against - omit to scan without uploading"
+    required: false
+  token:
+    description: "Warden API token, store as a repo/org secret (e.g. secrets.WARDEN_TOKEN)"
+    required: false
+  api-url:
+    description: "Warden dashboard API base URL"
+    required: false
+    default: "https://app.warden.dev"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: "20"
+
+    - name: Install Warden CLI
+      shell: bash
+      run: npm install --no-save warden@latest
+
+    - name: Run scan
+      shell: bash
+      run: |
+        set -e
+        args=(scan "${{ inputs.path }}" --fail-on "${{ inputs.fail-on }}")
+        if [ -n "${{ inputs.repo }}" ] && [ -n "${{ inputs.token }}" ]; then
+          args+=(--upload --repo "${{ inputs.repo }}" --token "${{ inputs.token }}" --api-url "${{ inputs.api-url }}" --commit "${{ github.sha }}" --branch "${{ github.ref_name }}")
+        fi
+        npx warden "${args[@]}"
