@@ -15,15 +15,20 @@ import {
 import type { Severity } from "@/lib/db/schema";
 import { rateLimit } from "@/lib/rate-limit";
 
+// Every string field is capped - request.json() buffers the whole body
+// into memory before Zod ever runs, so with no bound here a single
+// request (5000 findings x unbounded strings) from one leaked token
+// could OOM the process well before the per-token rate limit engages.
+// Sizes are set generously above what a real detector finding needs.
 const findingSchema = z.object({
-  filePath: z.string().min(1),
-  ruleId: z.string().min(1),
+  filePath: z.string().min(1).max(500),
+  ruleId: z.string().min(1).max(200),
   severity: z.enum(["critical", "high", "medium", "low", "info"]),
   line: z.number().int().nonnegative(),
   column: z.number().int().nonnegative().nullable(),
-  message: z.string().min(1),
-  snippet: z.string(),
-  fixSuggestion: z.string().nullable(),
+  message: z.string().min(1).max(2000),
+  snippet: z.string().max(5000),
+  fixSuggestion: z.string().max(2000).nullable(),
 });
 
 const bodySchema = z.object({
@@ -62,6 +67,18 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
   const limit = rateLimit(`scan-upload:${token.id}`, 30, 60 * 60 * 1000);
   if (!limit.allowed) {
     return NextResponse.json({ error: "rate limit exceeded, try again later" }, { status: 429 });
+  }
+
+  // Checked before request.json() ever buffers the body into memory -
+  // the per-field string caps below only apply after JSON.parse has
+  // already paid the cost of loading (and allocating) the whole thing.
+  // 5000 findings x the schema's own max string lengths comes out to
+  // roughly 5-6MB; 10MB leaves headroom without allowing an arbitrarily
+  // large body through.
+  const MAX_BODY_BYTES = 10 * 1024 * 1024;
+  const contentLength = Number(request.headers.get("content-length") ?? "0");
+  if (contentLength > MAX_BODY_BYTES) {
+    return NextResponse.json({ error: "request body too large" }, { status: 413 });
   }
 
   const json = await request.json().catch(() => null);
