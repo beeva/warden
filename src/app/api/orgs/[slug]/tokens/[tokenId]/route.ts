@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import { deleteApiToken, getOrgForMember, listApiTokensForOrg, logAudit } from "@/lib/db/queries";
 import { getSession } from "@/lib/auth/session";
+import { rateLimit } from "@/lib/rate-limit";
 import { withErrorHandling } from "@/lib/api-error-handler";
 
 export const runtime = "nodejs";
+
+const REVOKE_TOKEN_RATE_LIMIT = 20;
+const REVOKE_TOKEN_RATE_WINDOW_MS = 60 * 60_000;
 
 export const DELETE = withErrorHandling(async (_request: Request, { params }: { params: Promise<{ slug: string; tokenId: string }> }) => {
   const session = await getSession();
@@ -16,6 +20,9 @@ export const DELETE = withErrorHandling(async (_request: Request, { params }: { 
   if (resolved.membership.role !== "owner") {
     return NextResponse.json({ error: "only an org owner can revoke API tokens" }, { status: 403 });
   }
+
+  const limitResult = rateLimit(`revoke-token:${session.userId}`, REVOKE_TOKEN_RATE_LIMIT, REVOKE_TOKEN_RATE_WINDOW_MS);
+  if (!limitResult.allowed) return NextResponse.json({ error: "too many requests, try again later" }, { status: 429 });
 
   const id = Number(tokenId);
   if (!Number.isInteger(id)) return NextResponse.json({ error: "invalid token id" }, { status: 400 });

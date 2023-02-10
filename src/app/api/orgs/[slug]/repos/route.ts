@@ -3,9 +3,13 @@ import { z } from "zod";
 import { createRepo, getOrgForMember, getRepoBySlug, listReposForOrg, logAudit } from "@/lib/db/queries";
 import { getSession } from "@/lib/auth/session";
 import { slugify } from "@/lib/slug";
+import { rateLimit } from "@/lib/rate-limit";
 import { withErrorHandling } from "@/lib/api-error-handler";
 
 export const runtime = "nodejs";
+
+const CREATE_REPO_RATE_LIMIT = 30;
+const CREATE_REPO_RATE_WINDOW_MS = 60 * 60_000;
 
 export const GET = withErrorHandling(async (_request: Request, { params }: { params: Promise<{ slug: string }> }) => {
   const session = await getSession();
@@ -28,6 +32,9 @@ export const POST = withErrorHandling(async (request: Request, { params }: { par
   const { slug } = await params;
   const resolved = await getOrgForMember(slug, session.userId);
   if (!resolved) return NextResponse.json({ error: "org not found" }, { status: 404 });
+
+  const limitResult = rateLimit(`create-repo:${session.userId}`, CREATE_REPO_RATE_LIMIT, CREATE_REPO_RATE_WINDOW_MS);
+  if (!limitResult.allowed) return NextResponse.json({ error: "too many requests, try again later" }, { status: 429 });
 
   let raw: unknown;
   try {

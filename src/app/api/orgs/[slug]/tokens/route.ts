@@ -3,9 +3,13 @@ import { z } from "zod";
 import { createApiToken, getOrgForMember, listApiTokensForOrg, logAudit } from "@/lib/db/queries";
 import { getSession } from "@/lib/auth/session";
 import { generateApiToken } from "@/lib/auth/token";
+import { rateLimit } from "@/lib/rate-limit";
 import { withErrorHandling } from "@/lib/api-error-handler";
 
 export const runtime = "nodejs";
+
+const CREATE_TOKEN_RATE_LIMIT = 20;
+const CREATE_TOKEN_RATE_WINDOW_MS = 60 * 60_000;
 
 export const GET = withErrorHandling(async (_request: Request, { params }: { params: Promise<{ slug: string }> }) => {
   const session = await getSession();
@@ -36,6 +40,9 @@ export const POST = withErrorHandling(async (request: Request, { params }: { par
   if (resolved.membership.role !== "owner") {
     return NextResponse.json({ error: "only an org owner can create API tokens" }, { status: 403 });
   }
+
+  const limitResult = rateLimit(`create-token:${session.userId}`, CREATE_TOKEN_RATE_LIMIT, CREATE_TOKEN_RATE_WINDOW_MS);
+  if (!limitResult.allowed) return NextResponse.json({ error: "too many requests, try again later" }, { status: 429 });
 
   let raw: unknown;
   try {

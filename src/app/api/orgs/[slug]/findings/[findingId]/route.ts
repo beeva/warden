@@ -2,11 +2,15 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getFindingById, getOrgForMember, logAudit, scanBelongsToOrg, setFindingStatus } from "@/lib/db/queries";
 import { getSession } from "@/lib/auth/session";
+import { rateLimit } from "@/lib/rate-limit";
 import { withErrorHandling } from "@/lib/api-error-handler";
 
 export const runtime = "nodejs";
 
 const bodySchema = z.object({ status: z.enum(["open", "acknowledged", "false_positive", "fixed"]) });
+
+const UPDATE_FINDING_RATE_LIMIT = 200;
+const UPDATE_FINDING_RATE_WINDOW_MS = 60 * 60_000;
 
 // Any member (not just the owner) can triage a finding - acknowledging or
 // marking something a false positive is routine day-to-day work, not a
@@ -19,6 +23,9 @@ export const PATCH = withErrorHandling(async (request: Request, { params }: { pa
   const { slug, findingId } = await params;
   const resolved = await getOrgForMember(slug, session.userId);
   if (!resolved) return NextResponse.json({ error: "org not found" }, { status: 404 });
+
+  const limitResult = rateLimit(`update-finding:${session.userId}`, UPDATE_FINDING_RATE_LIMIT, UPDATE_FINDING_RATE_WINDOW_MS);
+  if (!limitResult.allowed) return NextResponse.json({ error: "too many requests, try again later" }, { status: 429 });
 
   const id = Number(findingId);
   if (!Number.isInteger(id)) return NextResponse.json({ error: "invalid finding id" }, { status: 400 });
