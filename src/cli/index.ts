@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { Command } from "commander";
 import { scanSource } from "../lib/detectors/scan";
 import type { Severity } from "../lib/detectors/types";
@@ -9,6 +9,13 @@ import { meetsThreshold } from "./severity";
 import { uploadResults } from "./upload";
 
 const SEVERITIES: Severity[] = ["critical", "high", "medium", "low", "info"];
+
+// A real .sol file is a few KB to a few hundred KB at most - this is
+// generous headroom above that, not a tight fit. Scanning is meant to
+// run against code you don't fully trust yet, so a single pathological
+// (or malicious, e.g. checked in by a compromised dependency) huge file
+// shouldn't be read fully into memory before anything can reject it.
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
 const program = new Command();
 
@@ -42,7 +49,21 @@ program
       return;
     }
 
-    const results = files.map((filePath) => scanSource(filePath, readFileSync(filePath, "utf8")));
+    // One unreadable file (permissions, a race with something deleting
+    // it, a symlink loop) shouldn't abort the whole batch - scanSource's
+    // own parse step already catches parser-internal failures (including
+    // a stack overflow on pathologically nested input) and reports them
+    // as a per-file parseError, so this only needs to guard the read.
+    const results = files.map((filePath) => {
+      try {
+        if (statSync(filePath).size > MAX_FILE_SIZE_BYTES) {
+          return { filePath, findings: [], parseError: `skipped - larger than ${MAX_FILE_SIZE_BYTES / (1024 * 1024)}MB` };
+        }
+        return scanSource(filePath, readFileSync(filePath, "utf8"));
+      } catch (err) {
+        return { filePath, findings: [], parseError: err instanceof Error ? err.message : String(err) };
+      }
+    });
     console.log(formatResults(results, opts.color !== false));
 
     if (opts.upload) {
