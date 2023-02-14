@@ -40,6 +40,12 @@ export const repos = pgTable(
     slug: text("slug").notNull(),
     name: text("name").notNull(),
     defaultBranch: text("default_branch").notNull().default("main"),
+    // The minimum severity that gates a deploy - a scan with a finding at
+    // or above this level reports `blocked: true`. Defaults to the
+    // strictest useful setting (only true criticals block); an owner can
+    // loosen or tighten it per repo since not every repo has the same
+    // risk tolerance (a reference/example contract vs. a mainnet deploy).
+    failThreshold: severityEnum("fail_threshold").notNull().default("critical"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [unique("repos_org_slug_unique").on(table.orgId, table.slug)]

@@ -1,0 +1,1 @@
+ALTER TABLE "repos" ADD COLUMN "fail_threshold" "severity" DEFAULT 'critical' NOT NULL;
