@@ -87,6 +87,10 @@ export async function listReposForOrg(orgId: number) {
   return db.select().from(repos).where(eq(repos.orgId, orgId)).orderBy(repos.createdAt);
 }
 
+export async function updateRepoFailThreshold(repoId: number, failThreshold: Severity) {
+  await db.update(repos).set({ failThreshold }).where(eq(repos.id, repoId));
+}
+
 export async function createApiToken(orgId: number, tokenHash: string, label: string, createdByUserId: number) {
   const [token] = await db.insert(apiTokens).values({ orgId, tokenHash, label, createdByUserId }).returning();
   if (!token) throw new Error("failed to create api token");

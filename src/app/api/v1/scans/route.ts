@@ -14,6 +14,7 @@ import {
 } from "@/lib/db/queries";
 import type { Severity } from "@/lib/db/schema";
 import { rateLimit } from "@/lib/rate-limit";
+import { meetsThreshold } from "@/lib/severity";
 
 // Every string field is capped - request.json() buffers the whole body
 // into memory before Zod ever runs, so with no bound here a single
@@ -43,8 +44,6 @@ const bodySchema = z.object({
   filesScanned: z.number().int().nonnegative(),
   findings: z.array(findingSchema).max(5000),
 });
-
-const BLOCKING_SEVERITIES = new Set<Severity>(["critical"]);
 
 async function authenticate(request: NextRequest) {
   const header = request.headers.get("authorization");
@@ -137,7 +136,10 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
     metadata: { repoSlug: body.repoSlug, source: body.source, counts, viaTokenId: token.id },
   });
 
-  const blocked = (Object.keys(counts) as Severity[]).some((s) => counts[s] > 0 && BLOCKING_SEVERITIES.has(s));
+  // Each repo's own failThreshold, not a hardcoded "critical only" - an
+  // owner can tighten or loosen what blocks a deploy per repo, since a
+  // reference contract and a mainnet deploy don't share a risk tolerance.
+  const blocked = meetsThreshold(counts, repo.failThreshold);
 
   return NextResponse.json({ scanId: scan.id, blocked, counts }, { status: 201 });
 });
