@@ -5,6 +5,7 @@ import { getOrgForMember, getRepoBySlug, listScansForRepo } from "@/lib/db/queri
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDuration, formatRelativeTime } from "@/lib/utils";
+import { RepoSettingsCard } from "./repo-settings-card";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string; repoSlug: string }> }) {
   const { repoSlug } = await params;
@@ -85,6 +86,8 @@ export default async function RepoPage({ params }: { params: Promise<{ slug: str
           )}
         </CardContent>
       </Card>
+
+      {resolved.membership.role === "owner" ? <RepoSettingsCard slug={slug} repoSlug={repoSlug} failThreshold={repo.failThreshold} /> : null}
     </main>
   );
 }
