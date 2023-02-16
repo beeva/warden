@@ -1,5 +1,6 @@
 import { parseSolidity } from "./parse";
 import { detectorRegistry } from "./registry";
+import { applySuppressions } from "./suppress";
 import type { ScanFileResult } from "./types";
 
 /**
@@ -16,7 +17,7 @@ export function scanSource(filePath: string, source: string): ScanFileResult {
   }
 
   const sourceLines = source.split("\n");
-  const findings = detectorRegistry.flatMap((detector) => {
+  const rawFindings = detectorRegistry.flatMap((detector) => {
     try {
       return detector.run({ ast, sourceLines, filePath });
     } catch (err) {
@@ -25,5 +26,5 @@ export function scanSource(filePath: string, source: string): ScanFileResult {
     }
   });
 
-  return { filePath, findings, parseError: null };
+  return { filePath, findings: applySuppressions(sourceLines, rawFindings), parseError: null };
 }
