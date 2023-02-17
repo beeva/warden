@@ -31,6 +31,15 @@ export async function getOrgBySlug(slug: string) {
   return org ?? null;
 }
 
+export async function getOrgById(orgId: number) {
+  const [org] = await db.select().from(orgs).where(eq(orgs.id, orgId)).limit(1);
+  return org ?? null;
+}
+
+export async function setOrgSlackWebhookUrl(orgId: number, slackWebhookUrl: string | null) {
+  await db.update(orgs).set({ slackWebhookUrl }).where(eq(orgs.id, orgId));
+}
+
 export async function addOrgMember(orgId: number, userId: number, role: "owner" | "member") {
   const [member] = await db.insert(orgMembers).values({ orgId, userId, role }).returning();
   if (!member) throw new Error("failed to add org member");

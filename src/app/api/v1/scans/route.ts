@@ -7,6 +7,7 @@ import {
   createRepo,
   createScan,
   getApiTokenByHash,
+  getOrgById,
   getRepoBySlug,
   insertFindings,
   logAudit,
@@ -15,6 +16,7 @@ import {
 import type { Severity } from "@/lib/db/schema";
 import { rateLimit } from "@/lib/rate-limit";
 import { meetsThreshold } from "@/lib/severity";
+import { formatBlockedScanMessage, sendSlackNotification } from "@/lib/notify/slack";
 
 // Every string field is capped - request.json() buffers the whole body
 // into memory before Zod ever runs, so with no bound here a single
@@ -140,6 +142,26 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
   // owner can tighten or loosen what blocks a deploy per repo, since a
   // reference contract and a mainnet deploy don't share a risk tolerance.
   const blocked = meetsThreshold(counts, repo.failThreshold);
+
+  if (blocked) {
+    const org = await getOrgById(token.orgId);
+    if (org?.slackWebhookUrl) {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3522";
+      // Not awaited into the response path in a way that could fail the
+      // request - a scan that completed and was recorded shouldn't come
+      // back as an error just because a downstream Slack post failed.
+      await sendSlackNotification(
+        org.slackWebhookUrl,
+        formatBlockedScanMessage({
+          orgName: org.name,
+          repoName: repo.name,
+          scanId: scan.id,
+          counts,
+          dashboardUrl: `${appUrl}/app/${org.slug}/${repo.slug}/scans/${scan.id}`,
+        })
+      );
+    }
+  }
 
   return NextResponse.json({ scanId: scan.id, blocked, counts }, { status: 201 });
 });
