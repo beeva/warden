@@ -17,6 +17,10 @@ export const orgs = pgTable("orgs", {
   id: serial("id").primaryKey(),
   slug: text("slug").notNull().unique(),
   name: text("name").notNull(),
+  // An incoming Slack webhook URL is itself the credential (whoever has
+  // it can post as this integration) - stored as an org-level setting,
+  // not per-user, since a blocked scan is an org-wide event.
+  slackWebhookUrl: text("slack_webhook_url"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
