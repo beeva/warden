@@ -52,12 +52,17 @@ should be checking on every single commit, not a human once a quarter.
   and an eval harness (`npm run evals`) reporting precision/recall against it - currently 100/100
   on all 12 fixtures, gated strictly on recall (a missed finding is the dangerous failure mode for
   a security scanner; a false positive just costs a few minutes of review)
+- `// warden-ignore` / `// warden-ignore: rule-a, rule-b` suppression comments, matched on a
+  finding's own line or the line above it (the `eslint-disable-next-line` convention)
 - CLI (`warden scan <path>`) - colorized terminal output, `--fail-on <severity>` for CI gating,
   `--upload` to push results to the dashboard
 - `action.yml` - a composite GitHub Action wrapping the CLI
 - Scan ingestion API (`POST /api/v1/scans`) - authenticated by a per-org API token (SHA-256
   hashed, shown once at creation), auto-creates the repo on first upload, computes severity
-  counts and a `blocked` flag the CLI/Action use to decide the exit code
+  counts and a `blocked` flag (against each repo's own configurable `failThreshold`) the CLI/Action
+  use to decide the exit code
+- Optional Slack notification (an org-level incoming webhook, `https://` enforced) posted whenever
+  a scan crosses its repo's threshold
 - Dashboard - orgs, repos, scan history, and a findings table where any member can triage status
   (open/acknowledged/false_positive/fixed) - every scan and status change lands in an audit log
 
@@ -101,8 +106,14 @@ npm run evals        # fixture-corpus precision/recall report, gated on recall
 - [x] Adversarial review pass - found and fixed a GitHub Actions script-injection hole, an
       unbounded scan-ingestion payload, and missing rate limits on four write endpoints - see
       [SECURITY.md](./SECURITY.md)
-- [ ] Per-repo configurable CI-gate threshold (currently fixed at "any critical blocks")
-- [ ] Suppression comments (`// warden-ignore: rule-id`) for accepted-risk findings
+- [x] Per-repo configurable CI-gate threshold - live-verified: the same upload reports
+      `blocked: false` at the default (critical) threshold and `blocked: true` once an owner
+      lowers it
+- [x] Suppression comments (`// warden-ignore: rule-id`) for accepted-risk findings
+- [x] Slack notification on a blocked scan - real HTTP delivery verified against a local receiver
+      in the test, not a mock
+- [ ] More detectors (signature malleability, unprotected upgradeable-contract initializers)
+- [ ] Pagination on scan/finding history for repos with a long tail
 
 ## License
 
