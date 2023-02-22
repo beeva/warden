@@ -31,7 +31,7 @@ should be checking on every single commit, not a human once a quarter.
 - Next.js (App Router) + TypeScript, Tailwind, Postgres via Drizzle
 - Session auth (scrypt password hashing, signed session cookies), multi-user orgs with
   owner/member roles
-- Real detector engine (`src/lib/detectors/`) - Solidity source is parsed into a real AST, then 12
+- Real detector engine (`src/lib/detectors/`) - Solidity source is parsed into a real AST, then 14
   detectors each walk it looking for one exploit class:
   - `reentrancy-state-change-after-call` - a low-level `.call(...)` followed by a state write in
     the same function, with no reentrancy guard (SWC-107)
@@ -48,9 +48,13 @@ should be checking on every single commit, not a human once a quarter.
   - `missing-zero-address-check` - an address setter with no `address(0)` guard
   - `deprecated-language-construct` - `throw`/`sha3`/`callcode`
   - `unchecked-erc20-transfer` - a bare, unchecked `.transfer`/`.transferFrom` on an ERC20 token
+  - `unprotected-initializer` - an `initialize()`-style function with no guard against being called
+    more than once - the bug class behind the Wormhole and Audius proxy-takeover incidents
+  - `signature-replay-risk` - `ecrecover` used with no apparent nonce or used-signature tracking
+    (heuristic - confirms a mechanism looks present, not that it's wired up correctly)
 - A fixture corpus (`fixtures/`) of real-shaped vulnerable contracts and their fixed counterparts,
   and an eval harness (`npm run evals`) reporting precision/recall against it - currently 100/100
-  on all 12 fixtures, gated strictly on recall (a missed finding is the dangerous failure mode for
+  on all 16 fixtures, gated strictly on recall (a missed finding is the dangerous failure mode for
   a security scanner; a false positive just costs a few minutes of review)
 - `// warden-ignore` / `// warden-ignore: rule-a, rule-b` suppression comments, matched on a
   finding's own line or the line above it (the `eslint-disable-next-line` convention)
@@ -96,9 +100,9 @@ npm run evals        # fixture-corpus precision/recall report, gated on recall
 - [x] Domain schema (users, orgs, membership, repos, API tokens, scans, findings, audit log)
 - [x] Session auth, multi-user signup and login
 - [x] Real Solidity AST parsing (`@solidity-parser/parser`) and a detector-engine framework
-- [x] 12 hand-verified exploit-class detectors, 42 unit tests against the real parser
-- [x] Fixture corpus (6 vulnerable / 6 safe contracts) and an eval harness - 100% precision and
-      recall, gated strictly on recall
+- [x] 14 hand-verified exploit-class detectors, 60 unit tests against the real parser
+- [x] Fixture corpus (8 vulnerable / 8 safe contracts) and an eval harness - 100% precision and
+      recall on all 16, gated strictly on recall
 - [x] CLI (`warden scan`) - colorized output, `--fail-on` for CI gating, `--upload`
 - [x] Scan ingestion API - token auth, repo auto-create, CI-gate response
 - [x] GitHub Action (`action.yml`) wrapping the CLI
@@ -112,8 +116,9 @@ npm run evals        # fixture-corpus precision/recall report, gated on recall
 - [x] Suppression comments (`// warden-ignore: rule-id`) for accepted-risk findings
 - [x] Slack notification on a blocked scan - real HTTP delivery verified against a local receiver
       in the test, not a mock
-- [ ] More detectors (signature malleability, unprotected upgradeable-contract initializers)
+- [x] Unprotected-initializer and signature-replay-risk detectors, plus 4 more fixtures
 - [ ] Pagination on scan/finding history for repos with a long tail
+- [ ] Account settings (change password)
 
 ## License
 

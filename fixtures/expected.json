@@ -5,10 +5,14 @@
   { "file": "vulnerable/lottery.sol", "expectedRuleIds": ["timestamp-dependence", "weak-randomness-source"] },
   { "file": "vulnerable/payout-loop.sol", "expectedRuleIds": ["unbounded-loop-external-call"] },
   { "file": "vulnerable/ownership-setter.sol", "expectedRuleIds": ["missing-zero-address-check"] },
+  { "file": "vulnerable/unguarded-initializer.sol", "expectedRuleIds": ["unprotected-initializer"] },
+  { "file": "vulnerable/replayable-withdrawal.sol", "expectedRuleIds": ["signature-replay-risk"] },
   { "file": "safe/vault-guarded.sol", "expectedRuleIds": [] },
   { "file": "safe/access-controlled.sol", "expectedRuleIds": [] },
   { "file": "safe/fixed-proxy.sol", "expectedRuleIds": [] },
   { "file": "safe/seeded-lottery.sol", "expectedRuleIds": [] },
   { "file": "safe/pull-payment.sol", "expectedRuleIds": [] },
-  { "file": "safe/checked-setter.sol", "expectedRuleIds": [] }
+  { "file": "safe/checked-setter.sol", "expectedRuleIds": [] },
+  { "file": "safe/guarded-initializer.sol", "expectedRuleIds": [] },
+  { "file": "safe/nonce-protected-withdrawal.sol", "expectedRuleIds": [] }
 ]
