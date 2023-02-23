@@ -5,6 +5,7 @@ import { getOrgForMember, latestScanSummary, listApiTokensForOrg, listOrgMembers
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatRelativeTime } from "@/lib/utils";
+import { AppNavBar } from "@/components/account-menu";
 import { MembersCard } from "./members-card";
 import { RepoCreateForm } from "./repo-create-form";
 import { SlackSettingsCard } from "./slack-settings-card";
@@ -33,7 +34,9 @@ export default async function OrgPage({ params }: { params: Promise<{ slug: stri
   const isOwner = resolved.membership.role === "owner";
 
   return (
-    <main className="container-page flex flex-col gap-8 py-16">
+    <>
+      <AppNavBar />
+      <main className="container-page flex flex-col gap-8 py-16">
       <h1 className="font-display text-2xl text-steel-50">{resolved.org.name}</h1>
 
       <Card>
@@ -75,6 +78,7 @@ export default async function OrgPage({ params }: { params: Promise<{ slug: stri
       <MembersCard slug={slug} members={members} isOwner={isOwner} />
       <TokensCard slug={slug} tokens={tokens.map((t) => ({ ...t, createdAt: t.createdAt.toISOString(), lastUsedAt: t.lastUsedAt?.toISOString() ?? null }))} isOwner={isOwner} />
       {isOwner ? <SlackSettingsCard slug={slug} connected={!!resolved.org.slackWebhookUrl} /> : null}
-    </main>
+      </main>
+    </>
   );
 }
