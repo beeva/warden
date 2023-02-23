@@ -20,6 +20,10 @@ export async function createUser(email: string, passwordHash: string) {
   return user;
 }
 
+export async function updateUserPassword(userId: number, passwordHash: string) {
+  await db.update(users).set({ passwordHash }).where(eq(users.id, userId));
+}
+
 export async function createOrg(slug: string, name: string) {
   const [org] = await db.insert(orgs).values({ slug, name }).returning();
   if (!org) throw new Error("failed to create org");
