@@ -176,8 +176,13 @@ export async function getScanById(scanId: number) {
   return scan ?? null;
 }
 
-export async function listScansForRepo(repoId: number, limit = 50) {
-  return db.select().from(scans).where(eq(scans.repoId, repoId)).orderBy(desc(scans.startedAt)).limit(limit);
+export async function listScansForRepo(repoId: number, limit = 50, offset = 0) {
+  return db.select().from(scans).where(eq(scans.repoId, repoId)).orderBy(desc(scans.startedAt)).limit(limit).offset(offset);
+}
+
+export async function countScansForRepo(repoId: number): Promise<number> {
+  const [row] = await db.select({ count: sql<number>`count(*)::int` }).from(scans).where(eq(scans.repoId, repoId));
+  return row?.count ?? 0;
 }
 
 export async function insertFindings(
@@ -188,8 +193,19 @@ export async function insertFindings(
   await db.insert(findings).values(rows.map((r) => ({ scanId, ...r })));
 }
 
-export async function listFindingsForScan(scanId: number) {
-  return db.select().from(findings).where(eq(findings.scanId, scanId)).orderBy(findings.severity, findings.filePath, findings.line);
+export async function listFindingsForScan(scanId: number, limit = 50, offset = 0) {
+  return db
+    .select()
+    .from(findings)
+    .where(eq(findings.scanId, scanId))
+    .orderBy(findings.severity, findings.filePath, findings.line)
+    .limit(limit)
+    .offset(offset);
+}
+
+export async function countFindingsForScan(scanId: number): Promise<number> {
+  const [row] = await db.select({ count: sql<number>`count(*)::int` }).from(findings).where(eq(findings.scanId, scanId));
+  return row?.count ?? 0;
 }
 
 export async function getFindingById(findingId: number) {
