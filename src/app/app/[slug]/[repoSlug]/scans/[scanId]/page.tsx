@@ -1,9 +1,10 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { getSession } from "@/lib/auth/session";
-import { getOrgForMember, getRepoBySlug, getScanById, listFindingsForScan } from "@/lib/db/queries";
+import { countFindingsForScan, getOrgForMember, getRepoBySlug, getScanById, listFindingsForScan } from "@/lib/db/queries";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Pagination, parsePage } from "@/components/ui/pagination";
 import { formatDate } from "@/lib/utils";
 import type { Severity } from "@/lib/db/schema";
 import { FindingStatusControl } from "./finding-status-control";
@@ -16,8 +17,17 @@ const SEVERITY_TONE: Record<Severity, "critical" | "high" | "medium" | "low" | "
   info: "info",
 };
 
-export default async function ScanPage({ params }: { params: Promise<{ slug: string; repoSlug: string; scanId: string }> }) {
+const PAGE_SIZE = 50;
+
+export default async function ScanPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string; repoSlug: string; scanId: string }>;
+  searchParams: Promise<{ page?: string }>;
+}) {
   const { slug, repoSlug, scanId } = await params;
+  const page = parsePage((await searchParams).page);
   const session = await getSession();
   if (!session) redirect("/login");
 
@@ -31,7 +41,11 @@ export default async function ScanPage({ params }: { params: Promise<{ slug: str
   const scan = Number.isInteger(id) ? await getScanById(id) : null;
   if (!scan || scan.repoId !== repo.id) notFound();
 
-  const findings = await listFindingsForScan(scan.id);
+  const [findings, totalFindings] = await Promise.all([
+    listFindingsForScan(scan.id, PAGE_SIZE, (page - 1) * PAGE_SIZE),
+    countFindingsForScan(scan.id),
+  ]);
+  const totalPages = Math.max(1, Math.ceil(totalFindings / PAGE_SIZE));
 
   return (
     <main className="container-page flex flex-col gap-8 py-16">
@@ -47,7 +61,7 @@ export default async function ScanPage({ params }: { params: Promise<{ slug: str
 
       <Card>
         <CardHeader>
-          <CardTitle>Findings ({findings.length})</CardTitle>
+          <CardTitle>Findings ({totalFindings})</CardTitle>
         </CardHeader>
         <CardContent>
           {findings.length === 0 ? (
@@ -86,6 +100,7 @@ export default async function ScanPage({ params }: { params: Promise<{ slug: str
               </table>
             </div>
           )}
+          <Pagination basePath={`/app/${slug}/${repoSlug}/scans/${scan.id}`} page={page} totalPages={totalPages} />
         </CardContent>
       </Card>
     </main>
