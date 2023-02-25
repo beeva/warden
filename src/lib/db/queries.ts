@@ -72,6 +72,29 @@ export async function listOrgsForUser(userId: number) {
     .where(eq(orgMembers.userId, userId));
 }
 
+/** How many owners an org currently has - used to block removing/demoting the last one, which would leave the org with no one able to manage members, tokens, or repo settings. */
+export async function countOrgOwners(orgId: number): Promise<number> {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(orgMembers)
+    .where(and(eq(orgMembers.orgId, orgId), eq(orgMembers.role, "owner")));
+  return row?.count ?? 0;
+}
+
+export async function removeOrgMember(orgId: number, userId: number) {
+  await db.delete(orgMembers).where(and(eq(orgMembers.orgId, orgId), eq(orgMembers.userId, userId)));
+}
+
+/** A single org_members row by its own id, scoped to the given org - used to authorize member removal without letting an owner of org A act on org B's membership row by guessing an id. */
+export async function getOrgMemberById(orgId: number, memberId: number) {
+  const [member] = await db
+    .select()
+    .from(orgMembers)
+    .where(and(eq(orgMembers.id, memberId), eq(orgMembers.orgId, orgId)))
+    .limit(1);
+  return member ?? null;
+}
+
 export async function listOrgMembers(orgId: number) {
   return db
     .select({ id: orgMembers.id, userId: users.id, email: users.email, role: orgMembers.role, createdAt: orgMembers.createdAt })
@@ -102,6 +125,10 @@ export async function listReposForOrg(orgId: number) {
 
 export async function updateRepoFailThreshold(repoId: number, failThreshold: Severity) {
   await db.update(repos).set({ failThreshold }).where(eq(repos.id, repoId));
+}
+
+export async function deleteRepo(repoId: number) {
+  await db.delete(repos).where(eq(repos.id, repoId));
 }
 
 export async function createApiToken(orgId: number, tokenHash: string, label: string, createdByUserId: number) {
