@@ -117,8 +117,11 @@ npm run evals        # fixture-corpus precision/recall report, gated on recall
 - [x] Slack notification on a blocked scan - real HTTP delivery verified against a local receiver
       in the test, not a mock
 - [x] Unprotected-initializer and signature-replay-risk detectors, plus 4 more fixtures
-- [ ] Pagination on scan/finding history for repos with a long tail
-- [ ] Account settings (change password)
+- [x] Pagination on scan/finding history for repos with a long tail
+- [x] Account settings (change password)
+- [x] Member removal (with a last-owner guard) and repo deletion (type-to-confirm, cascades to
+      that repo's own scans/findings)
+- [ ] More detectors, integration tests against a real DB for the query layer
 
 ## License
 

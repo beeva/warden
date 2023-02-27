@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getOrgForMember, getRepoBySlug, logAudit, updateRepoFailThreshold } from "@/lib/db/queries";
+import { deleteRepo, getOrgForMember, getRepoBySlug, logAudit, updateRepoFailThreshold } from "@/lib/db/queries";
 import { getSession } from "@/lib/auth/session";
 import { withErrorHandling } from "@/lib/api-error-handler";
 
@@ -47,6 +47,30 @@ export const PATCH = withErrorHandling(async (request: Request, { params }: { pa
     targetId: repo.id,
     metadata: { from: repo.failThreshold, to: parsed.data.failThreshold },
   });
+
+  return NextResponse.json({ ok: true });
+});
+
+// Owner-only - deletes every scan and finding for this repo along with it
+// (ON DELETE CASCADE), an irreversible action equivalent in blast radius
+// to revoking every credential in one step.
+export const DELETE = withErrorHandling(async (_request: Request, { params }: { params: Promise<{ slug: string; repoSlug: string }> }) => {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  const { slug, repoSlug } = await params;
+  const resolved = await getOrgForMember(slug, session.userId);
+  if (!resolved) return NextResponse.json({ error: "org not found" }, { status: 404 });
+
+  if (resolved.membership.role !== "owner") {
+    return NextResponse.json({ error: "only an org owner can delete a repo" }, { status: 403 });
+  }
+
+  const repo = await getRepoBySlug(resolved.org.id, repoSlug);
+  if (!repo) return NextResponse.json({ error: "repo not found" }, { status: 404 });
+
+  await deleteRepo(repo.id);
+  await logAudit({ orgId: resolved.org.id, actorUserId: session.userId, action: "repo.deleted", targetType: "repo", targetId: repo.id, metadata: { name: repo.name, slug: repo.slug } });
 
   return NextResponse.json({ ok: true });
 });
