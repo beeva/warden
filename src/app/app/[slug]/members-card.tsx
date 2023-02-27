@@ -19,6 +19,23 @@ export function MembersCard({ slug, members, isOwner }: { slug: string; members:
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [removingId, setRemovingId] = useState<number | null>(null);
+
+  async function handleRemove(memberId: number) {
+    setRemovingId(memberId);
+    setError(null);
+    try {
+      const response = await fetch(`/api/orgs/${slug}/members/${memberId}`, { method: "DELETE" });
+      if (!response.ok) {
+        const data = (await response.json().catch(() => ({}))) as { error?: string };
+        setError(data.error ?? "Could not remove member");
+        return;
+      }
+      router.refresh();
+    } finally {
+      setRemovingId(null);
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -52,9 +69,16 @@ export function MembersCard({ slug, members, isOwner }: { slug: string; members:
       <CardContent className="flex flex-col gap-4">
         <ul className="flex flex-col gap-2">
           {members.map((member) => (
-            <li key={member.id} className="flex items-center gap-2 text-sm">
-              <Badge tone={member.role === "owner" ? "low" : "neutral"}>{member.role}</Badge>
-              <span className="text-steel-200">{member.email}</span>
+            <li key={member.id} className="flex items-center justify-between gap-2 text-sm">
+              <div className="flex items-center gap-2">
+                <Badge tone={member.role === "owner" ? "low" : "neutral"}>{member.role}</Badge>
+                <span className="text-steel-200">{member.email}</span>
+              </div>
+              {isOwner ? (
+                <Button type="button" variant="ghost" size="sm" disabled={removingId === member.id} onClick={() => handleRemove(member.id)}>
+                  Remove
+                </Button>
+              ) : null}
             </li>
           ))}
         </ul>
