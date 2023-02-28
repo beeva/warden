@@ -4,11 +4,12 @@ import { Command } from "commander";
 import { scanSource } from "../lib/detectors/scan";
 import type { Severity } from "../lib/detectors/types";
 import { findSolidityFiles } from "./find-files";
-import { countBySeverity, formatResults } from "./format";
+import { countBySeverity, formatResults, formatResultsJson } from "./format";
 import { meetsThreshold } from "./severity";
 import { uploadResults } from "./upload";
 
 const SEVERITIES: Severity[] = ["critical", "high", "medium", "low", "info"];
+const FORMATS = ["text", "json"] as const;
 
 // A real .sol file is a few KB to a few hundred KB at most - this is
 // generous headroom above that, not a tight fit. Scanning is meant to
@@ -28,6 +29,7 @@ program
   .option("--fail-on <severity>", `exit non-zero if a finding at or above this severity exists (${SEVERITIES.join("|")})`, "critical")
   .option("--no-fail", "always exit 0, regardless of findings")
   .option("--no-color", "disable ANSI color in output")
+  .option("--format <text|json>", "output format", "text")
   .option("--upload", "upload results to the Warden dashboard (requires --repo, --token or WARDEN_TOKEN)")
   .option("--repo <slug>", "repo slug to upload against")
   .option("--token <token>", "API token (falls back to WARDEN_TOKEN env var)")
@@ -41,6 +43,14 @@ program
       process.exitCode = 2;
       return;
     }
+
+    const format = opts.format as string;
+    if (!FORMATS.includes(format as (typeof FORMATS)[number])) {
+      console.error(`--format must be one of: ${FORMATS.join(", ")}`);
+      process.exitCode = 2;
+      return;
+    }
+    const isJson = format === "json";
 
     const files = findSolidityFiles(targetPath);
     if (files.length === 0) {
@@ -64,29 +74,57 @@ program
         return { filePath, findings: [], parseError: err instanceof Error ? err.message : String(err) };
       }
     });
-    console.log(formatResults(results, opts.color !== false));
+
+    if (!isJson) console.log(formatResults(results, opts.color !== false));
+
+    // In JSON mode, everything (results, counts, and upload outcome)
+    // lands in the one JSON object printed at the end, rather than
+    // interleaving prose with machine-readable output - a consumer
+    // piping stdout into `jq` shouldn't have to strip anything out first.
+    let uploadOutcome: { scanId: number; blocked: boolean } | { error: string } | undefined;
 
     if (opts.upload) {
       const token = opts.token ?? process.env.WARDEN_TOKEN;
       if (!token || !opts.repo) {
-        console.error("--upload requires --repo and a token (--token or WARDEN_TOKEN)");
-        process.exitCode = 2;
-        return;
+        const message = "--upload requires --repo and a token (--token or WARDEN_TOKEN)";
+        if (isJson) {
+          uploadOutcome = { error: message };
+        } else {
+          console.error(message);
+          process.exitCode = 2;
+          return;
+        }
+      } else {
+        try {
+          const uploaded = await uploadResults(results, {
+            apiUrl: opts.apiUrl,
+            token,
+            repoSlug: opts.repo,
+            commitSha: opts.commit,
+            branch: opts.branch,
+          });
+          uploadOutcome = uploaded;
+          if (!isJson) console.log(`\nuploaded as scan #${uploaded.scanId}${uploaded.blocked ? " - dashboard marks this blocked" : ""}`);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          uploadOutcome = { error: message };
+          if (!isJson) {
+            console.error(`\nupload failed: ${message}`);
+            process.exitCode = 1;
+            return;
+          }
+        }
       }
-      try {
-        const uploaded = await uploadResults(results, {
-          apiUrl: opts.apiUrl,
-          token,
-          repoSlug: opts.repo,
-          commitSha: opts.commit,
-          branch: opts.branch,
-        });
-        console.log(`\nuploaded as scan #${uploaded.scanId}${uploaded.blocked ? " - dashboard marks this blocked" : ""}`);
-      } catch (err) {
-        console.error(`\nupload failed: ${err instanceof Error ? err.message : String(err)}`);
-        process.exitCode = 1;
-        return;
-      }
+    }
+
+    if (isJson) {
+      const summary = JSON.parse(formatResultsJson(results));
+      console.log(JSON.stringify({ ...summary, upload: uploadOutcome }, null, 2));
+    }
+
+    if (uploadOutcome && "error" in uploadOutcome) {
+      process.exitCode = 1;
+      return;
     }
 
     if (opts.fail === false) return;

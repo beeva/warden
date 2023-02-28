@@ -68,3 +68,13 @@ export function formatResults(results: ScanFileResult[], useColor: boolean): str
 
   return lines.join("\n");
 }
+
+/**
+ * Machine-readable output for `--format json` - other tooling (a custom
+ * CI step, a bot posting a PR comment) can consume this without having
+ * to scrape the colorized terminal format. `counts` is included
+ * alongside `results` so a consumer doesn't have to re-derive it.
+ */
+export function formatResultsJson(results: ScanFileResult[]): string {
+  return JSON.stringify({ results, counts: countBySeverity(results) }, null, 2);
+}
