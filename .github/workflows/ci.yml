@@ -8,6 +8,26 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # tests/integration/queries.test.ts hits a real Postgres instance,
+    # same as this repo's own local dev setup - not mocked, so CI needs
+    # the real thing running alongside the job, not a stub.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: warden
+          POSTGRES_PASSWORD: warden
+          POSTGRES_DB: warden
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U warden"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://warden:warden@localhost:5432/warden
+      SESSION_SECRET: ci-only-secret-not-used-for-anything-real
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -17,5 +37,7 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
+      - run: npm run db:migrate
       - run: npm test
+      - run: npm run db:seed
       - run: npm run evals

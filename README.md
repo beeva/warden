@@ -121,7 +121,11 @@ npm run evals        # fixture-corpus precision/recall report, gated on recall
 - [x] Account settings (change password)
 - [x] Member removal (with a last-owner guard) and repo deletion (type-to-confirm, cascades to
       that repo's own scans/findings)
-- [ ] More detectors, integration tests against a real DB for the query layer
+- [x] CLI `--format json` for machine-readable output
+- [x] Integration tests against a real Postgres instance for the query layer (14 tests, own
+      uniquely-suffixed org/user per run, torn down afterward) - CI now runs a real Postgres
+      service alongside the job for these, not a stub
+- [ ] More detectors
 
 ## License
 
