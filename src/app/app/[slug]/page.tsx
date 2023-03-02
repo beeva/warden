@@ -37,7 +37,12 @@ export default async function OrgPage({ params }: { params: Promise<{ slug: stri
     <>
       <AppNavBar />
       <main className="container-page flex flex-col gap-8 py-16">
-      <h1 className="font-display text-2xl text-steel-50">{resolved.org.name}</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="font-display text-2xl text-steel-50">{resolved.org.name}</h1>
+        <Link href={`/app/${slug}/activity`} className="text-sm text-steel-400 hover:text-cobalt-400">
+          Activity →
+        </Link>
+      </div>
 
       <Card>
         <CardHeader>
