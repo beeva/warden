@@ -1,3 +1,4 @@
+import { arbitraryAddressSendDetector } from "./rules/arbitrary-address-send";
 import { delegatecallUntrustedDetector } from "./rules/delegatecall-untrusted";
 import { deprecatedConstructsDetector } from "./rules/deprecated-constructs";
 import { floatingPragmaDetector } from "./rules/floating-pragma";
@@ -29,6 +30,7 @@ export const detectorRegistry: Detector[] = [
   uncheckedErc20TransferDetector,
   unprotectedInitializerDetector,
   signatureReplayDetector,
+  arbitraryAddressSendDetector,
 ];
 
 export function getDetector(id: string): Detector | undefined {
