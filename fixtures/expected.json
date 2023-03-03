@@ -7,6 +7,7 @@
   { "file": "vulnerable/ownership-setter.sol", "expectedRuleIds": ["missing-zero-address-check"] },
   { "file": "vulnerable/unguarded-initializer.sol", "expectedRuleIds": ["unprotected-initializer"] },
   { "file": "vulnerable/replayable-withdrawal.sol", "expectedRuleIds": ["signature-replay-risk"] },
+  { "file": "vulnerable/open-drain.sol", "expectedRuleIds": ["arbitrary-address-send"] },
   { "file": "safe/vault-guarded.sol", "expectedRuleIds": [] },
   { "file": "safe/access-controlled.sol", "expectedRuleIds": [] },
   { "file": "safe/fixed-proxy.sol", "expectedRuleIds": [] },
@@ -14,5 +15,6 @@
   { "file": "safe/pull-payment.sol", "expectedRuleIds": [] },
   { "file": "safe/checked-setter.sol", "expectedRuleIds": [] },
   { "file": "safe/guarded-initializer.sol", "expectedRuleIds": [] },
-  { "file": "safe/nonce-protected-withdrawal.sol", "expectedRuleIds": [] }
+  { "file": "safe/nonce-protected-withdrawal.sol", "expectedRuleIds": [] },
+  { "file": "safe/guarded-withdraw.sol", "expectedRuleIds": [] }
 ]

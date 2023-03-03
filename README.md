@@ -31,7 +31,7 @@ should be checking on every single commit, not a human once a quarter.
 - Next.js (App Router) + TypeScript, Tailwind, Postgres via Drizzle
 - Session auth (scrypt password hashing, signed session cookies), multi-user orgs with
   owner/member roles
-- Real detector engine (`src/lib/detectors/`) - Solidity source is parsed into a real AST, then 14
+- Real detector engine (`src/lib/detectors/`) - Solidity source is parsed into a real AST, then 15
   detectors each walk it looking for one exploit class:
   - `reentrancy-state-change-after-call` - a low-level `.call(...)` followed by a state write in
     the same function, with no reentrancy guard (SWC-107)
@@ -52,9 +52,11 @@ should be checking on every single commit, not a human once a quarter.
     more than once - the bug class behind the Wormhole and Audius proxy-takeover incidents
   - `signature-replay-risk` - `ecrecover` used with no apparent nonce or used-signature tracking
     (heuristic - confirms a mechanism looks present, not that it's wired up correctly)
+  - `arbitrary-address-send` - a function with no access-control guard sends value to an address
+    taken directly from its own parameters (SWC-105-adjacent)
 - A fixture corpus (`fixtures/`) of real-shaped vulnerable contracts and their fixed counterparts,
   and an eval harness (`npm run evals`) reporting precision/recall against it - currently 100/100
-  on all 16 fixtures, gated strictly on recall (a missed finding is the dangerous failure mode for
+  on all 18 fixtures, gated strictly on recall (a missed finding is the dangerous failure mode for
   a security scanner; a false positive just costs a few minutes of review)
 - `// warden-ignore` / `// warden-ignore: rule-a, rule-b` suppression comments, matched on a
   finding's own line or the line above it (the `eslint-disable-next-line` convention)
@@ -100,9 +102,9 @@ npm run evals        # fixture-corpus precision/recall report, gated on recall
 - [x] Domain schema (users, orgs, membership, repos, API tokens, scans, findings, audit log)
 - [x] Session auth, multi-user signup and login
 - [x] Real Solidity AST parsing (`@solidity-parser/parser`) and a detector-engine framework
-- [x] 14 hand-verified exploit-class detectors, 60 unit tests against the real parser
-- [x] Fixture corpus (8 vulnerable / 8 safe contracts) and an eval harness - 100% precision and
-      recall on all 16, gated strictly on recall
+- [x] 15 hand-verified exploit-class detectors, 64 unit tests against the real parser
+- [x] Fixture corpus (9 vulnerable / 9 safe contracts) and an eval harness - 100% precision and
+      recall on all 18, gated strictly on recall
 - [x] CLI (`warden scan`) - colorized output, `--fail-on` for CI gating, `--upload`
 - [x] Scan ingestion API - token auth, repo auto-create, CI-gate response
 - [x] GitHub Action (`action.yml`) wrapping the CLI
@@ -125,6 +127,8 @@ npm run evals        # fixture-corpus precision/recall report, gated on recall
 - [x] Integration tests against a real Postgres instance for the query layer (14 tests, own
       uniquely-suffixed org/user per run, torn down afterward) - CI now runs a real Postgres
       service alongside the job for these, not a stub
+- [x] Org activity page - the audit trail the schema always had, now visible in the dashboard
+- [x] arbitrary-address-send detector
 - [ ] More detectors
 
 ## License
