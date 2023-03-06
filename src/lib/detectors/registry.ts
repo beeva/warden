@@ -5,6 +5,7 @@ import { floatingPragmaDetector } from "./rules/floating-pragma";
 import { missingZeroAddressCheckDetector } from "./rules/missing-zero-address-check";
 import { reentrancyDetector } from "./rules/reentrancy";
 import { signatureReplayDetector } from "./rules/signature-replay";
+import { strictBalanceEqualityDetector } from "./rules/strict-balance-equality";
 import { timestampDependenceDetector } from "./rules/timestamp-dependence";
 import { txOriginAuthDetector } from "./rules/tx-origin-auth";
 import { unboundedLoopDetector } from "./rules/unbounded-loop";
@@ -31,6 +32,7 @@ export const detectorRegistry: Detector[] = [
   unprotectedInitializerDetector,
   signatureReplayDetector,
   arbitraryAddressSendDetector,
+  strictBalanceEqualityDetector,
 ];
 
 export function getDetector(id: string): Detector | undefined {
