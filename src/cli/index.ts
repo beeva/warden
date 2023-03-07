@@ -1,10 +1,12 @@
 #!/usr/bin/env node
-import { readFileSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { basename, dirname, resolve } from "node:path";
 import { Command } from "commander";
 import { scanSource } from "../lib/detectors/scan";
 import type { Severity } from "../lib/detectors/types";
 import { findSolidityFiles } from "./find-files";
 import { countBySeverity, formatResults, formatResultsJson } from "./format";
+import { wardenWorkflowTemplate } from "./init-template";
 import { meetsThreshold } from "./severity";
 import { uploadResults } from "./upload";
 
@@ -133,6 +135,28 @@ program
     if (meetsThreshold(counts, failOn as Severity)) {
       process.exitCode = 1;
     }
+  });
+
+program
+  .command("init")
+  .description("Scaffold a GitHub Actions workflow that runs `warden scan` on every push and PR")
+  .option("--repo <slug>", "repo slug to associate uploads with (defaults to the current directory's name)")
+  .option("--force", "overwrite an existing .github/workflows/warden.yml")
+  .action((opts) => {
+    const repoSlug = opts.repo ?? basename(resolve(process.cwd()));
+    const outPath = resolve(process.cwd(), ".github/workflows/warden.yml");
+
+    if (existsSync(outPath) && !opts.force) {
+      console.error(`${outPath} already exists - pass --force to overwrite it`);
+      process.exitCode = 1;
+      return;
+    }
+
+    mkdirSync(dirname(outPath), { recursive: true });
+    writeFileSync(outPath, wardenWorkflowTemplate(repoSlug));
+    console.log(`wrote ${outPath}`);
+    console.log(`Set the WARDEN_TOKEN secret in this repo's settings, then create an org token with:`);
+    console.log(`  POST /api/orgs/:slug/tokens {"label": "ci-github-actions"}`);
   });
 
 program.parseAsync(process.argv);

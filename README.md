@@ -132,7 +132,9 @@ npm run evals        # fixture-corpus precision/recall report, gated on recall
       service alongside the job for these, not a stub
 - [x] Org activity page - the audit trail the schema always had, now visible in the dashboard
 - [x] arbitrary-address-send and strict-balance-equality detectors
-- [ ] More detectors, `warden init` to scaffold a starter CI workflow
+- [x] `warden init` - scaffolds a starter GitHub Actions workflow, refuses to clobber an existing
+      one without `--force`
+- [ ] More detectors
 
 ## License
 
