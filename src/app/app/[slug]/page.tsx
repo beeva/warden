@@ -1,7 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { getSession } from "@/lib/auth/session";
-import { getOrgForMember, latestScanSummary, listApiTokensForOrg, listOrgMembers, listReposForOrg } from "@/lib/db/queries";
+import { getOrgForMember, latestScanSummary, listApiTokensForOrg, listOrgMembers, listReposForOrg, orgFindingCounts } from "@/lib/db/queries";
+import type { Severity } from "@/lib/db/schema";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatRelativeTime } from "@/lib/utils";
@@ -24,14 +25,18 @@ export default async function OrgPage({ params }: { params: Promise<{ slug: stri
   const resolved = await getOrgForMember(slug, session.userId);
   if (!resolved) notFound();
 
-  const [repos, members, tokens] = await Promise.all([
+  const [repos, members, tokens, findingCounts] = await Promise.all([
     listReposForOrg(resolved.org.id),
     listOrgMembers(resolved.org.id),
     listApiTokensForOrg(resolved.org.id),
+    orgFindingCounts(resolved.org.id),
   ]);
 
   const summaries = await Promise.all(repos.map((repo) => latestScanSummary(repo.id)));
   const isOwner = resolved.membership.role === "owner";
+  const SEVERITY_ORDER: Severity[] = ["critical", "high", "medium", "low", "info"];
+  const countBySeverity = Object.fromEntries(findingCounts.map((row) => [row.severity, row.count])) as Partial<Record<Severity, number>>;
+  const totalOpen = findingCounts.reduce((sum, row) => sum + row.count, 0);
 
   return (
     <>
@@ -43,6 +48,25 @@ export default async function OrgPage({ params }: { params: Promise<{ slug: stri
           Activity →
         </Link>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Open findings across all repos</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {totalOpen === 0 ? (
+            <p className="text-sm text-mint-400">Nothing open right now.</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {SEVERITY_ORDER.filter((severity) => (countBySeverity[severity] ?? 0) > 0).map((severity) => (
+                <Badge key={severity} tone={severity}>
+                  {countBySeverity[severity]} {severity}
+                </Badge>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
