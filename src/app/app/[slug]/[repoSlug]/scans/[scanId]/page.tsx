@@ -1,11 +1,20 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { getSession } from "@/lib/auth/session";
-import { countFindingsForScan, getOrgForMember, getRepoBySlug, getScanById, listFindingsForScan } from "@/lib/db/queries";
+import {
+  countFindingsForScan,
+  getOrgForMember,
+  getPreviousScan,
+  getRepoBySlug,
+  getScanById,
+  listFindingKeysForScan,
+  listFindingsForScan,
+} from "@/lib/db/queries";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Pagination, parsePage } from "@/components/ui/pagination";
 import { formatDate } from "@/lib/utils";
+import { diffScans } from "@/lib/scan-diff";
 import type { Severity } from "@/lib/db/schema";
 import { FindingStatusControl } from "./finding-status-control";
 
@@ -41,11 +50,16 @@ export default async function ScanPage({
   const scan = Number.isInteger(id) ? await getScanById(id) : null;
   if (!scan || scan.repoId !== repo.id) notFound();
 
-  const [findings, totalFindings] = await Promise.all([
+  const [findings, totalFindings, previousScan] = await Promise.all([
     listFindingsForScan(scan.id, PAGE_SIZE, (page - 1) * PAGE_SIZE),
     countFindingsForScan(scan.id),
+    getPreviousScan(repo.id, scan.startedAt),
   ]);
   const totalPages = Math.max(1, Math.ceil(totalFindings / PAGE_SIZE));
+
+  const diff = previousScan
+    ? diffScans(await listFindingKeysForScan(previousScan.id), await listFindingKeysForScan(scan.id))
+    : null;
 
   return (
     <main className="container-page flex flex-col gap-8 py-16">
@@ -57,6 +71,20 @@ export default async function ScanPage({
         <p className="mt-1 text-sm text-steel-400">
           {scan.source.toUpperCase()} · {scan.branch ?? "no branch"} · {scan.commitSha ? scan.commitSha.slice(0, 12) : "no commit"} · {formatDate(scan.startedAt)}
         </p>
+        {diff && previousScan ? (
+          <div className="mt-2 flex items-center gap-2 text-xs text-steel-500">
+            <span>
+              Since{" "}
+              <Link href={`/app/${slug}/${repoSlug}/scans/${previousScan.id}`} className="text-steel-300 hover:text-cobalt-400">
+                scan #{previousScan.id}
+              </Link>
+              :
+            </span>
+            {diff.newCount > 0 ? <Badge tone="critical">{diff.newCount} new</Badge> : null}
+            {diff.resolvedCount > 0 ? <Badge tone="safe">{diff.resolvedCount} resolved</Badge> : null}
+            {diff.newCount === 0 && diff.resolvedCount === 0 ? <span>no change</span> : null}
+          </div>
+        ) : null}
       </div>
 
       <Card>

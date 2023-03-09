@@ -134,6 +134,8 @@ npm run evals        # fixture-corpus precision/recall report, gated on recall
 - [x] arbitrary-address-send and strict-balance-equality detectors
 - [x] `warden init` - scaffolds a starter GitHub Actions workflow, refuses to clobber an existing
       one without `--force`
+- [x] Scan-to-scan diff - new/resolved finding counts against the previous completed scan, matched
+      by rule + file + line since findings have no stable identity across separate uploads
 - [ ] More detectors
 
 ## License

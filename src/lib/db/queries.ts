@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, lt, sql } from "drizzle-orm";
 import { db } from "./client";
 import { apiTokens, auditLog, findings, orgMembers, orgs, repos, scans, users } from "./schema";
 import type { FindingStatus, ScanSource, ScanStatus, Severity } from "./schema";
@@ -212,6 +212,17 @@ export async function countScansForRepo(repoId: number): Promise<number> {
   return row?.count ?? 0;
 }
 
+/** The most recent completed scan for a repo that started before the given scan - what a scan's findings are diffed against to show what's new/resolved since last time. */
+export async function getPreviousScan(repoId: number, beforeStartedAt: Date) {
+  const [scan] = await db
+    .select()
+    .from(scans)
+    .where(and(eq(scans.repoId, repoId), eq(scans.status, "completed"), lt(scans.startedAt, beforeStartedAt)))
+    .orderBy(desc(scans.startedAt))
+    .limit(1);
+  return scan ?? null;
+}
+
 export async function insertFindings(
   scanId: number,
   rows: { ruleId: string; severity: Severity; filePath: string; line: number; column: number | null; message: string; snippet: string; fixSuggestion: string | null }[]
@@ -228,6 +239,11 @@ export async function listFindingsForScan(scanId: number, limit = 50, offset = 0
     .orderBy(findings.severity, findings.filePath, findings.line)
     .limit(limit)
     .offset(offset);
+}
+
+/** Just the fields diffScans() needs, for every finding in a scan - not paginated, since a diff has to see the whole set on both sides to be accurate, but narrow enough (three short columns) to stay cheap even for a large scan. */
+export async function listFindingKeysForScan(scanId: number) {
+  return db.select({ ruleId: findings.ruleId, filePath: findings.filePath, line: findings.line }).from(findings).where(eq(findings.scanId, scanId));
 }
 
 export async function countFindingsForScan(scanId: number): Promise<number> {
