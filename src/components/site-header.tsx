@@ -9,6 +9,9 @@ export function SiteHeader() {
           Warden
         </Link>
         <nav className="flex items-center gap-2">
+          <LinkButton href="/rules" variant="ghost" size="sm">
+            Rules
+          </LinkButton>
           <LinkButton href="/docs" variant="ghost" size="sm">
             Docs
           </LinkButton>

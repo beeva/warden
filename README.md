@@ -136,6 +136,8 @@ npm run evals        # fixture-corpus precision/recall report, gated on recall
       one without `--force`
 - [x] Scan-to-scan diff - new/resolved finding counts against the previous completed scan, matched
       by rule + file + line since findings have no stable identity across separate uploads
+- [x] Public `/rules` reference page, generated straight from `detectorRegistry` - can't drift out
+      of date with what the engine actually runs
 - [ ] More detectors
 
 ## License
