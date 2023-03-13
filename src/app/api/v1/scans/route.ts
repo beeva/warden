@@ -2,21 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { withErrorHandling } from "@/lib/api-error-handler";
 import { hashApiToken } from "@/lib/auth/token";
-import {
-  completeScan,
-  createRepo,
-  createScan,
-  getApiTokenByHash,
-  getOrgById,
-  getRepoBySlug,
-  insertFindings,
-  logAudit,
-  touchApiTokenLastUsed,
-} from "@/lib/db/queries";
-import type { Severity } from "@/lib/db/schema";
+import { createRepo, getApiTokenByHash, getRepoBySlug, touchApiTokenLastUsed } from "@/lib/db/queries";
 import { rateLimit } from "@/lib/rate-limit";
-import { meetsThreshold } from "@/lib/severity";
-import { formatBlockedScanMessage, sendSlackNotification } from "@/lib/notify/slack";
+import { recordScan } from "@/lib/scan-recording";
 
 // Every string field is capped - request.json() buffers the whole body
 // into memory before Zod ever runs, so with no bound here a single
@@ -96,72 +84,16 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
     repo = await createRepo(token.orgId, body.repoSlug, body.repoSlug);
   }
 
-  const startedAt = Date.now();
-  const scan = await createScan({
-    repoId: repo.id,
-    triggeredByTokenId: token.id,
-    source: body.source,
-    commitSha: body.commitSha ?? null,
-    branch: body.branch ?? null,
-  });
-
-  await insertFindings(
-    scan.id,
-    body.findings.map((f) => ({
-      ruleId: f.ruleId,
-      severity: f.severity,
-      filePath: f.filePath,
-      line: f.line,
-      column: f.column,
-      message: f.message,
-      snippet: f.snippet,
-      fixSuggestion: f.fixSuggestion,
-    }))
-  );
-
-  const counts: Record<Severity, number> = { critical: 0, high: 0, medium: 0, low: 0, info: 0 };
-  for (const f of body.findings) counts[f.severity] += 1;
-
-  await completeScan(scan.id, {
-    status: "completed",
-    filesScanned: body.filesScanned,
-    counts,
-    durationMs: Date.now() - startedAt,
-  });
-
-  await logAudit({
+  const result = await recordScan({
     orgId: token.orgId,
-    actorUserId: null,
-    action: "scan.completed",
-    targetType: "scan",
-    targetId: scan.id,
-    metadata: { repoSlug: body.repoSlug, source: body.source, counts, viaTokenId: token.id },
+    repo,
+    source: body.source,
+    filesScanned: body.filesScanned,
+    commitSha: body.commitSha,
+    branch: body.branch,
+    triggeredByTokenId: token.id,
+    findings: body.findings,
   });
 
-  // Each repo's own failThreshold, not a hardcoded "critical only" - an
-  // owner can tighten or loosen what blocks a deploy per repo, since a
-  // reference contract and a mainnet deploy don't share a risk tolerance.
-  const blocked = meetsThreshold(counts, repo.failThreshold);
-
-  if (blocked) {
-    const org = await getOrgById(token.orgId);
-    if (org?.slackWebhookUrl) {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3522";
-      // Not awaited into the response path in a way that could fail the
-      // request - a scan that completed and was recorded shouldn't come
-      // back as an error just because a downstream Slack post failed.
-      await sendSlackNotification(
-        org.slackWebhookUrl,
-        formatBlockedScanMessage({
-          orgName: org.name,
-          repoName: repo.name,
-          scanId: scan.id,
-          counts,
-          dashboardUrl: `${appUrl}/app/${org.slug}/${repo.slug}/scans/${scan.id}`,
-        })
-      );
-    }
-  }
-
-  return NextResponse.json({ scanId: scan.id, blocked, counts }, { status: 201 });
+  return NextResponse.json(result, { status: 201 });
 });
