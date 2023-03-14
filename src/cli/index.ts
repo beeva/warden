@@ -4,7 +4,7 @@ import { basename, dirname, resolve } from "node:path";
 import { Command } from "commander";
 import { scanSource } from "../lib/detectors/scan";
 import type { Severity } from "../lib/detectors/types";
-import { findSolidityFiles } from "./find-files";
+import { findSolidityFiles } from "../lib/find-solidity-files";
 import { countBySeverity, formatResults, formatResultsJson } from "./format";
 import { wardenWorkflowTemplate } from "./init-template";
 import { meetsThreshold } from "./severity";
