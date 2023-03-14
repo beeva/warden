@@ -131,6 +131,10 @@ export async function deleteRepo(repoId: number) {
   await db.delete(repos).where(eq(repos.id, repoId));
 }
 
+export async function setRepoGithubConfig(repoId: number, cloneUrl: string | null, webhookSecret: string | null) {
+  await db.update(repos).set({ githubCloneUrl: cloneUrl, githubWebhookSecret: webhookSecret }).where(eq(repos.id, repoId));
+}
+
 export async function createApiToken(orgId: number, tokenHash: string, label: string, createdByUserId: number) {
   const [token] = await db.insert(apiTokens).values({ orgId, tokenHash, label, createdByUserId }).returning();
   if (!token) throw new Error("failed to create api token");

@@ -50,6 +50,13 @@ export const repos = pgTable(
     // loosen or tighten it per repo since not every repo has the same
     // risk tolerance (a reference/example contract vs. a mainnet deploy).
     failThreshold: severityEnum("fail_threshold").notNull().default("critical"),
+    // Set together, by the owner, to enable push-triggered scanning: a
+    // GitHub webhook posts to /api/webhooks/github/:slug/:repoSlug on
+    // every push, Warden verifies it against this secret, shallow-clones
+    // cloneUrl at the pushed commit, and scans it server-side - no CI
+    // runner or CLI needed on the consumer's side at all.
+    githubCloneUrl: text("github_clone_url"),
+    githubWebhookSecret: text("github_webhook_secret"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [unique("repos_org_slug_unique").on(table.orgId, table.slug)]
