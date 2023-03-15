@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Pagination, parsePage } from "@/components/ui/pagination";
 import { formatDuration, formatRelativeTime } from "@/lib/utils";
 import { DangerZoneCard } from "./danger-zone-card";
+import { GithubSettingsCard } from "./github-settings-card";
 import { RepoSettingsCard } from "./repo-settings-card";
 
 const PAGE_SIZE = 20;
@@ -103,6 +104,7 @@ export default async function RepoPage({
       {resolved.membership.role === "owner" ? (
         <>
           <RepoSettingsCard slug={slug} repoSlug={repoSlug} failThreshold={repo.failThreshold} />
+          <GithubSettingsCard slug={slug} repoSlug={repoSlug} connected={!!repo.githubWebhookSecret} />
           <DangerZoneCard slug={slug} repoSlug={repoSlug} />
         </>
       ) : null}

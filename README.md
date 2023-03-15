@@ -23,8 +23,9 @@ should be checking on every single commit, not a human once a quarter.
 - **Validated against a corpus, not vibes** - every detector is checked against real
   vulnerable-and-fixed pairs of fixture contracts, with a precision/recall report, not just
   "it compiled and didn't crash."
-- **Runs where the code already lives** - a CLI for local runs, a GitHub Action for CI, and a
-  dashboard that ties both together into one audit trail.
+- **Runs where the code already lives** - a CLI for local runs, a GitHub Action for CI, an optional
+  push-triggered GitHub webhook that scans server-side with no CI runner needed at all, and a
+  dashboard that ties all three into one audit trail.
 
 ## Architecture
 
@@ -138,6 +139,11 @@ npm run evals        # fixture-corpus precision/recall report, gated on recall
       by rule + file + line since findings have no stable identity across separate uploads
 - [x] Public `/rules` reference page, generated straight from `detectorRegistry` - can't drift out
       of date with what the engine actually runs
+- [x] GitHub webhook push-triggered scanning - server-side shallow clone + scan on every push, no
+      CI runner or CLI needed. HMAC-SHA256 verified (GitHub's own scheme), owner-only to connect.
+      Live-verified end to end against a real local git repo: a genuine `git clone` subprocess, a
+      real vulnerable contract scanned, correct findings recorded with the real commit SHA and
+      branch, and a forged signature correctly rejected with 401
 - [ ] More detectors
 
 ## License

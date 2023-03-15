@@ -10,6 +10,8 @@ const LABELS: Record<string, string> = {
   "finding.status_changed": "changed a finding's status",
   "slack.connected": "connected Slack",
   "slack.disconnected": "disconnected Slack",
+  "github.connected": "connected a GitHub repo",
+  "github.disconnected": "disconnected a GitHub repo",
 };
 
 export function formatAction(action: string): string {
