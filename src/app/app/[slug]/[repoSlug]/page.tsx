@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { getSession } from "@/lib/auth/session";
-import { countScansForRepo, getOrgForMember, getRepoBySlug, listScansForRepo } from "@/lib/db/queries";
+import { countScansForRepo, getOrgForMember, getRepoBySlug, listScansForRepo, listWebhookDeliveriesForRepo } from "@/lib/db/queries";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Pagination, parsePage } from "@/components/ui/pagination";
@@ -9,6 +9,7 @@ import { formatDuration, formatRelativeTime } from "@/lib/utils";
 import { DangerZoneCard } from "./danger-zone-card";
 import { GithubSettingsCard } from "./github-settings-card";
 import { RepoSettingsCard } from "./repo-settings-card";
+import { WebhookDeliveriesCard } from "./webhook-deliveries-card";
 
 const PAGE_SIZE = 20;
 
@@ -35,7 +36,11 @@ export default async function RepoPage({
   const repo = await getRepoBySlug(resolved.org.id, repoSlug);
   if (!repo) notFound();
 
-  const [scans, totalScans] = await Promise.all([listScansForRepo(repo.id, PAGE_SIZE, (page - 1) * PAGE_SIZE), countScansForRepo(repo.id)]);
+  const [scans, totalScans, deliveries] = await Promise.all([
+    listScansForRepo(repo.id, PAGE_SIZE, (page - 1) * PAGE_SIZE),
+    countScansForRepo(repo.id),
+    repo.githubWebhookSecret ? listWebhookDeliveriesForRepo(repo.id, 20) : Promise.resolve([]),
+  ]);
   const totalPages = Math.max(1, Math.ceil(totalScans / PAGE_SIZE));
 
   return (
@@ -100,6 +105,8 @@ export default async function RepoPage({
           <Pagination basePath={`/app/${slug}/${repoSlug}`} page={page} totalPages={totalPages} />
         </CardContent>
       </Card>
+
+      {resolved.membership.role === "owner" ? <WebhookDeliveriesCard slug={slug} repoSlug={repoSlug} deliveries={deliveries} /> : null}
 
       {resolved.membership.role === "owner" ? (
         <>

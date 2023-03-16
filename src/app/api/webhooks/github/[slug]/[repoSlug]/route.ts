@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withErrorHandling } from "@/lib/api-error-handler";
-import { getOrgBySlug, getRepoBySlug } from "@/lib/db/queries";
+import { getOrgBySlug, getRepoBySlug, recordWebhookDelivery } from "@/lib/db/queries";
 import { rateLimit } from "@/lib/rate-limit";
 import { recordScan } from "@/lib/scan-recording";
 import { branchNameFromRef, cloneAndScan } from "@/lib/webhooks/clone-and-scan";
@@ -22,6 +22,15 @@ const pushPayloadSchema = z.object({
  * distinguishing "org doesn't exist" from "repo doesn't exist" from
  * "webhook not configured" - none of that should be inferable from the
  * response by someone probing URLs without the real secret.
+ *
+ * Every attempt that gets far enough to identify a real repo (valid or
+ * not) is recorded in webhook_deliveries - the same "recent deliveries"
+ * concept GitHub's own webhook settings show, so an owner debugging "why
+ * didn't my push trigger a scan" has somewhere to look besides server
+ * logs they don't have access to. A request for an unrecognized
+ * org/repo slug isn't recorded anywhere, on purpose - there's no repo id
+ * to attach it to, and logging by slug alone would just be a knob for
+ * flooding a table with junk from anyone probing random URLs.
  */
 export const POST = withErrorHandling(async (request: Request, { params }: { params: Promise<{ slug: string; repoSlug: string }> }) => {
   const { slug, repoSlug } = await params;
@@ -37,27 +46,32 @@ export const POST = withErrorHandling(async (request: Request, { params }: { par
     return NextResponse.json({ error: "rate limit exceeded" }, { status: 429 });
   }
 
+  const eventType = request.headers.get("x-github-event");
+
   // Read as raw text and verify BEFORE any JSON.parse - signature
   // verification has to run against the exact bytes GitHub signed.
   const rawBody = await request.text();
   const signature = request.headers.get("x-hub-signature-256");
   if (!verifyGitHubSignature(rawBody, signature, repo.githubWebhookSecret)) {
+    await recordWebhookDelivery({ repoId: repo.id, eventType, status: "invalid_signature" });
     return NextResponse.json({ error: "invalid signature" }, { status: 401 });
   }
 
-  const eventType = request.headers.get("x-github-event");
   if (eventType === "ping") {
     // Sent once when the webhook is first configured, to let the owner
     // confirm delivery works - not a push, nothing to scan.
+    await recordWebhookDelivery({ repoId: repo.id, eventType, status: "ok" });
     return NextResponse.json({ ok: true });
   }
   if (eventType !== "push") {
+    await recordWebhookDelivery({ repoId: repo.id, eventType, status: "ok", errorMessage: "ignored: not a push event" });
     return NextResponse.json({ ok: true, ignored: eventType });
   }
 
   const json = JSON.parse(rawBody);
   const parsed = pushPayloadSchema.safeParse(json);
   if (!parsed.success) {
+    await recordWebhookDelivery({ repoId: repo.id, eventType, status: "error", errorMessage: "invalid push payload" });
     return NextResponse.json({ error: "invalid push payload" }, { status: 400 });
   }
   const branch = branchNameFromRef(parsed.data.ref);
@@ -66,7 +80,9 @@ export const POST = withErrorHandling(async (request: Request, { params }: { par
   try {
     cloneResult = await cloneAndScan(repo.githubCloneUrl, branch);
   } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
     console.error(`clone-and-scan failed for repo ${repo.id}:`, err);
+    await recordWebhookDelivery({ repoId: repo.id, eventType, status: "error", errorMessage: message.slice(0, 500) });
     return NextResponse.json({ error: "failed to clone and scan the repository" }, { status: 502 });
   }
 
@@ -80,6 +96,8 @@ export const POST = withErrorHandling(async (request: Request, { params }: { par
     branch,
     findings,
   });
+
+  await recordWebhookDelivery({ repoId: repo.id, eventType, status: "ok", scanId: result.scanId });
 
   return NextResponse.json(result, { status: 201 });
 });

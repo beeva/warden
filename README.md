@@ -144,6 +144,8 @@ npm run evals        # fixture-corpus precision/recall report, gated on recall
       Live-verified end to end against a real local git repo: a genuine `git clone` subprocess, a
       real vulnerable contract scanned, correct findings recorded with the real commit SHA and
       branch, and a forged signature correctly rejected with 401
+- [x] Webhook delivery history - every inbound GitHub webhook attempt (verified or not) recorded
+      and shown per repo, the same "recent deliveries" concept GitHub's own settings page has
 - [ ] More detectors
 
 ## License
