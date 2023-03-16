@@ -1,8 +1,8 @@
 import "server-only";
 import { and, desc, eq, lt, sql } from "drizzle-orm";
 import { db } from "./client";
-import { apiTokens, auditLog, findings, orgMembers, orgs, repos, scans, users } from "./schema";
-import type { FindingStatus, ScanSource, ScanStatus, Severity } from "./schema";
+import { apiTokens, auditLog, findings, orgMembers, orgs, repos, scans, users, webhookDeliveries } from "./schema";
+import type { FindingStatus, ScanSource, ScanStatus, Severity, WebhookDeliveryStatus } from "./schema";
 
 export async function getUserByEmail(email: string) {
   const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
@@ -133,6 +133,26 @@ export async function deleteRepo(repoId: number) {
 
 export async function setRepoGithubConfig(repoId: number, cloneUrl: string | null, webhookSecret: string | null) {
   await db.update(repos).set({ githubCloneUrl: cloneUrl, githubWebhookSecret: webhookSecret }).where(eq(repos.id, repoId));
+}
+
+export async function recordWebhookDelivery(input: {
+  repoId: number;
+  eventType: string | null;
+  status: WebhookDeliveryStatus;
+  errorMessage?: string | null;
+  scanId?: number | null;
+}) {
+  await db.insert(webhookDeliveries).values({
+    repoId: input.repoId,
+    eventType: input.eventType,
+    status: input.status,
+    errorMessage: input.errorMessage ?? null,
+    scanId: input.scanId ?? null,
+  });
+}
+
+export async function listWebhookDeliveriesForRepo(repoId: number, limit = 20) {
+  return db.select().from(webhookDeliveries).where(eq(webhookDeliveries.repoId, repoId)).orderBy(desc(webhookDeliveries.createdAt)).limit(limit);
 }
 
 export async function createApiToken(orgId: number, tokenHash: string, label: string, createdByUserId: number) {

@@ -5,6 +5,7 @@ export const scanStatusEnum = pgEnum("scan_status", ["running", "completed", "fa
 export const scanSourceEnum = pgEnum("scan_source", ["web", "cli", "ci"]);
 export const severityEnum = pgEnum("severity", ["critical", "high", "medium", "low", "info"]);
 export const findingStatusEnum = pgEnum("finding_status", ["open", "acknowledged", "false_positive", "fixed"]);
+export const webhookDeliveryStatusEnum = pgEnum("webhook_delivery_status", ["ok", "invalid_signature", "error"]);
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -126,6 +127,20 @@ export const auditLog = pgTable("audit_log", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+// One row per inbound GitHub webhook request, verified or not - the
+// same "recent deliveries" concept GitHub's own webhook settings page
+// shows, so an owner debugging "why didn't my push trigger a scan" has
+// somewhere to look besides server logs they don't have access to.
+export const webhookDeliveries = pgTable("webhook_deliveries", {
+  id: serial("id").primaryKey(),
+  repoId: integer("repo_id").notNull().references(() => repos.id, { onDelete: "cascade" }),
+  eventType: text("event_type"),
+  status: webhookDeliveryStatusEnum("status").notNull(),
+  errorMessage: text("error_message"),
+  scanId: integer("scan_id").references(() => scans.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export type User = typeof users.$inferSelect;
 export type Org = typeof orgs.$inferSelect;
 export type OrgMember = typeof orgMembers.$inferSelect;
@@ -138,3 +153,5 @@ export type Severity = (typeof severityEnum.enumValues)[number];
 export type FindingStatus = (typeof findingStatusEnum.enumValues)[number];
 export type ScanStatus = (typeof scanStatusEnum.enumValues)[number];
 export type ScanSource = (typeof scanSourceEnum.enumValues)[number];
+export type WebhookDelivery = typeof webhookDeliveries.$inferSelect;
+export type WebhookDeliveryStatus = (typeof webhookDeliveryStatusEnum.enumValues)[number];

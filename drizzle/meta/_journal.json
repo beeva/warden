@@ -29,6 +29,13 @@
       "when": 1790241474724,
       "tag": "0003_stale_tigra",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790245172803,
+      "tag": "0004_petite_carnage",
+      "breakpoints": true
     }
   ]
 }
