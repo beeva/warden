@@ -2,6 +2,7 @@ import { arbitraryAddressSendDetector } from "./rules/arbitrary-address-send";
 import { delegatecallUntrustedDetector } from "./rules/delegatecall-untrusted";
 import { deprecatedConstructsDetector } from "./rules/deprecated-constructs";
 import { floatingPragmaDetector } from "./rules/floating-pragma";
+import { lockedEtherDetector } from "./rules/locked-ether";
 import { missingZeroAddressCheckDetector } from "./rules/missing-zero-address-check";
 import { reentrancyDetector } from "./rules/reentrancy";
 import { signatureReplayDetector } from "./rules/signature-replay";
@@ -33,6 +34,7 @@ export const detectorRegistry: Detector[] = [
   signatureReplayDetector,
   arbitraryAddressSendDetector,
   strictBalanceEqualityDetector,
+  lockedEtherDetector,
 ];
 
 export function getDetector(id: string): Detector | undefined {
