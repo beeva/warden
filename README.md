@@ -32,7 +32,7 @@ should be checking on every single commit, not a human once a quarter.
 - Next.js (App Router) + TypeScript, Tailwind, Postgres via Drizzle
 - Session auth (scrypt password hashing, signed session cookies), multi-user orgs with
   owner/member roles
-- Real detector engine (`src/lib/detectors/`) - Solidity source is parsed into a real AST, then 16
+- Real detector engine (`src/lib/detectors/`) - Solidity source is parsed into a real AST, then 17
   detectors each walk it looking for one exploit class:
   - `reentrancy-state-change-after-call` - a low-level `.call(...)` followed by a state write in
     the same function, with no reentrancy guard (SWC-107)
@@ -58,9 +58,13 @@ should be checking on every single commit, not a human once a quarter.
   - `strict-balance-equality` - a contract's ether/token balance compared with `==`/`!=` -
     force-sendable (via `selfdestruct`) or directly transferable, so exact equality is fragile
     (SWC-132-adjacent)
+  - `locked-ether` - a contract can receive ether (`receive()`/a payable function) but has no
+    function anywhere that ever sends value back out - whole-contract analysis, not per-function,
+    and deliberately silent on proxy contracts (a payable fallback that delegatecalls elsewhere
+    delegates its entire logic, including any withdraw path, to a contract this scan can't see)
 - A fixture corpus (`fixtures/`) of real-shaped vulnerable contracts and their fixed counterparts,
   and an eval harness (`npm run evals`) reporting precision/recall against it - currently 100/100
-  on all 20 fixtures, gated strictly on recall (a missed finding is the dangerous failure mode for
+  on all 22 fixtures, gated strictly on recall (a missed finding is the dangerous failure mode for
   a security scanner; a false positive just costs a few minutes of review)
 - `// warden-ignore` / `// warden-ignore: rule-a, rule-b` suppression comments, matched on a
   finding's own line or the line above it (the `eslint-disable-next-line` convention)
@@ -146,6 +150,9 @@ npm run evals        # fixture-corpus precision/recall report, gated on recall
       branch, and a forged signature correctly rejected with 401
 - [x] Webhook delivery history - every inbound GitHub webhook attempt (verified or not) recorded
       and shown per repo, the same "recent deliveries" concept GitHub's own settings page has
+- [x] locked-ether detector - found and fixed a real false positive live (a proxy-pattern contract
+      was flagged before the delegatecall exclusion existed) via the eval harness, not by
+      inspection
 - [ ] More detectors
 
 ## License
