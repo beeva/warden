@@ -1,27 +1,28 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { withErrorHandling } from "@/lib/api-error-handler";
 import { getOrgBySlug, getRepoBySlug, recordWebhookDelivery } from "@/lib/db/queries";
 import { rateLimit } from "@/lib/rate-limit";
 import { recordScan } from "@/lib/scan-recording";
-import { branchNameFromRef, cloneAndScan } from "@/lib/webhooks/clone-and-scan";
+import { cloneAndScan } from "@/lib/webhooks/clone-and-scan";
 import { verifyGitHubSignature } from "@/lib/webhooks/github-verify";
+import { resolvePullRequestTarget, resolvePushTarget, type ScanTarget } from "@/lib/webhooks/resolve-target";
 
 export const runtime = "nodejs";
 
-const pushPayloadSchema = z.object({
-  ref: z.string(),
-  after: z.string(),
-});
-
 /**
  * Push-triggered, server-side scanning - no CI runner or CLI needed on
- * the consumer's side at all. Authenticated entirely by the HMAC
- * signature (there's no session here, and there can't be: GitHub is the
- * caller), so every failure path returns a generic 404/401 rather than
- * distinguishing "org doesn't exist" from "repo doesn't exist" from
- * "webhook not configured" - none of that should be inferable from the
- * response by someone probing URLs without the real secret.
+ * the consumer's side at all. Handles both `push` (scan whatever landed
+ * on a branch) and `pull_request` (scan the PR's head commit on
+ * opened/synchronize/reopened - the common "block merge on critical"
+ * pattern) - the same clone-and-scan and recordScan path either way,
+ * they only differ in which branch/commit they resolve to.
+ *
+ * Authenticated entirely by the HMAC signature (there's no session here,
+ * and there can't be: GitHub is the caller), so every failure path
+ * returns a generic 404/401 rather than distinguishing "org doesn't
+ * exist" from "repo doesn't exist" from "webhook not configured" - none
+ * of that should be inferable from the response by someone probing URLs
+ * without the real secret.
  *
  * Every attempt that gets far enough to identify a real repo (valid or
  * not) is recorded in webhook_deliveries - the same "recent deliveries"
@@ -63,22 +64,26 @@ export const POST = withErrorHandling(async (request: Request, { params }: { par
     await recordWebhookDelivery({ repoId: repo.id, eventType, status: "ok" });
     return NextResponse.json({ ok: true });
   }
-  if (eventType !== "push") {
-    await recordWebhookDelivery({ repoId: repo.id, eventType, status: "ok", errorMessage: "ignored: not a push event" });
+
+  const json = JSON.parse(rawBody);
+  let target: ScanTarget | null = null;
+  if (eventType === "push") target = resolvePushTarget(json);
+  else if (eventType === "pull_request") target = resolvePullRequestTarget(json);
+
+  if (!target) {
+    // Covers three cases identically: an event type this webhook doesn't
+    // act on at all, a pull_request action that didn't change the head
+    // commit (closed/labeled/...), and a malformed payload for an event
+    // type it does act on - none of them are errors worth a non-2xx
+    // response, since GitHub would just retry a push it already
+    // delivered correctly.
+    await recordWebhookDelivery({ repoId: repo.id, eventType, status: "ok", errorMessage: "ignored: nothing to scan for this event" });
     return NextResponse.json({ ok: true, ignored: eventType });
   }
 
-  const json = JSON.parse(rawBody);
-  const parsed = pushPayloadSchema.safeParse(json);
-  if (!parsed.success) {
-    await recordWebhookDelivery({ repoId: repo.id, eventType, status: "error", errorMessage: "invalid push payload" });
-    return NextResponse.json({ error: "invalid push payload" }, { status: 400 });
-  }
-  const branch = branchNameFromRef(parsed.data.ref);
-
   let cloneResult;
   try {
-    cloneResult = await cloneAndScan(repo.githubCloneUrl, branch);
+    cloneResult = await cloneAndScan(repo.githubCloneUrl, target.branch);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error(`clone-and-scan failed for repo ${repo.id}:`, err);
@@ -92,8 +97,8 @@ export const POST = withErrorHandling(async (request: Request, { params }: { par
     repo,
     source: "ci",
     filesScanned: cloneResult.filesScanned,
-    commitSha: parsed.data.after,
-    branch,
+    commitSha: target.commitSha,
+    branch: target.branch,
     findings,
   });
 

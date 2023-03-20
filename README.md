@@ -153,6 +153,11 @@ npm run evals        # fixture-corpus precision/recall report, gated on recall
 - [x] locked-ether detector - found and fixed a real false positive live (a proxy-pattern contract
       was flagged before the delegatecall exclusion existed) via the eval harness, not by
       inspection
+- [x] GitHub webhook also handles `pull_request` (opened/synchronize/reopened) - scans the PR's
+      head commit, the common "block merge on critical" pattern. Live-verified against a real repo
+      with two branches: an "opened" event correctly scanned the feature branch and found its real
+      vulnerability, a "closed" event was correctly ignored, and a plain push still scans main
+      exactly as before
 - [ ] More detectors
 
 ## License
