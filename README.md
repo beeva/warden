@@ -158,6 +158,8 @@ npm run evals        # fixture-corpus precision/recall report, gated on recall
       with two branches: an "opened" event correctly scanned the feature branch and found its real
       vulnerability, a "closed" event was correctly ignored, and a plain push still scans main
       exactly as before
+- [x] CSV export of a scan's findings - RFC 4180-shaped quoting, live-verified with real
+      comma/quote-containing content and confirmed cross-org access correctly 404s
 - [ ] More detectors
 
 ## License

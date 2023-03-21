@@ -270,6 +270,11 @@ export async function listFindingKeysForScan(scanId: number) {
   return db.select({ ruleId: findings.ruleId, filePath: findings.filePath, line: findings.line }).from(findings).where(eq(findings.scanId, scanId));
 }
 
+/** Every finding for a scan, unpaginated - for CSV export, where "give me everything" is the whole point, unlike the dashboard table view. */
+export async function listAllFindingsForScan(scanId: number) {
+  return db.select().from(findings).where(eq(findings.scanId, scanId)).orderBy(findings.severity, findings.filePath, findings.line);
+}
+
 export async function countFindingsForScan(scanId: number): Promise<number> {
   const [row] = await db.select({ count: sql<number>`count(*)::int` }).from(findings).where(eq(findings.scanId, scanId));
   return row?.count ?? 0;

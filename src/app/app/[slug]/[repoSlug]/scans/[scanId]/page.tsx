@@ -89,7 +89,14 @@ export default async function ScanPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Findings ({totalFindings})</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Findings ({totalFindings})</CardTitle>
+            {totalFindings > 0 ? (
+              <a href={`/api/orgs/${slug}/scans/${scan.id}/export`} className="text-xs text-cobalt-400 hover:text-cobalt-300">
+                Export CSV
+              </a>
+            ) : null}
+          </div>
         </CardHeader>
         <CardContent>
           {findings.length === 0 ? (
