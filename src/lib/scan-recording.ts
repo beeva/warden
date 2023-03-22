@@ -35,13 +35,22 @@ export interface RecordScanResult {
 /**
  * The single path every scan result flows through, regardless of where
  * it came from (a CLI --upload, a GitHub webhook triggering a
- * server-side clone-and-scan) - insert findings, roll up counts, decide
- * blocked against the repo's own threshold, audit-log it, and notify
- * Slack if configured. Two independent ingestion routes calling this
- * instead of duplicating the logic means the CI-gate and notification
- * behavior can never quietly drift apart between them.
+ * server-side clone-and-scan) - filter out ignored rules, insert
+ * findings, roll up counts, decide blocked against the repo's own
+ * threshold, audit-log it, and notify Slack if configured. Two
+ * independent ingestion routes calling this instead of duplicating the
+ * logic means the CI-gate and notification behavior can never quietly
+ * drift apart between them.
+ *
+ * ignoredRuleIds is applied here, server-side, rather than just hidden
+ * in the dashboard afterward - an ignored rule's findings are never
+ * inserted at all, so they can't silently push a scan over its fail
+ * threshold or trigger a Slack notification either.
  */
 export async function recordScan(input: RecordScanInput): Promise<RecordScanResult> {
+  const ignored = new Set(input.repo.ignoredRuleIds);
+  const findings = ignored.size === 0 ? input.findings : input.findings.filter((f) => !ignored.has(f.ruleId));
+
   const startedAt = Date.now();
   const scan = await createScan({
     repoId: input.repo.id,
@@ -52,10 +61,10 @@ export async function recordScan(input: RecordScanInput): Promise<RecordScanResu
     branch: input.branch ?? null,
   });
 
-  await insertFindings(scan.id, input.findings);
+  await insertFindings(scan.id, findings);
 
   const counts: Record<Severity, number> = { critical: 0, high: 0, medium: 0, low: 0, info: 0 };
-  for (const f of input.findings) counts[f.severity] += 1;
+  for (const f of findings) counts[f.severity] += 1;
 
   await completeScan(scan.id, {
     status: "completed",

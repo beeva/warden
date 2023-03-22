@@ -127,6 +127,10 @@ export async function updateRepoFailThreshold(repoId: number, failThreshold: Sev
   await db.update(repos).set({ failThreshold }).where(eq(repos.id, repoId));
 }
 
+export async function updateRepoIgnoredRules(repoId: number, ignoredRuleIds: string[]) {
+  await db.update(repos).set({ ignoredRuleIds }).where(eq(repos.id, repoId));
+}
+
 export async function deleteRepo(repoId: number) {
   await db.delete(repos).where(eq(repos.id, repoId));
 }

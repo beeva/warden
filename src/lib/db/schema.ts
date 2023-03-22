@@ -58,6 +58,13 @@ export const repos = pgTable(
     // runner or CLI needed on the consumer's side at all.
     githubCloneUrl: text("github_clone_url"),
     githubWebhookSecret: text("github_webhook_secret"),
+    // Rule ids an owner has decided don't apply to this repo at all -
+    // filtered out of every scan recorded server-side (CLI --upload or a
+    // GitHub webhook) before they're ever inserted, not just hidden in
+    // the UI afterward. Coarser than a warden-ignore comment (which
+    // silences one line): this is for "we've decided floating-pragma
+    // doesn't matter for this repo," not "this one call is fine."
+    ignoredRuleIds: text("ignored_rule_ids").array().notNull().default([]),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [unique("repos_org_slug_unique").on(table.orgId, table.slug)]

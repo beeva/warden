@@ -1,0 +1,1 @@
+ALTER TABLE "repos" ADD COLUMN "ignored_rule_ids" text[] DEFAULT '{}' NOT NULL;
