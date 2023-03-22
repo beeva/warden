@@ -8,6 +8,7 @@ import { Pagination, parsePage } from "@/components/ui/pagination";
 import { formatDuration, formatRelativeTime } from "@/lib/utils";
 import { DangerZoneCard } from "./danger-zone-card";
 import { GithubSettingsCard } from "./github-settings-card";
+import { IgnoredRulesCard } from "./ignored-rules-card";
 import { RepoSettingsCard } from "./repo-settings-card";
 import { WebhookDeliveriesCard } from "./webhook-deliveries-card";
 
@@ -111,6 +112,7 @@ export default async function RepoPage({
       {resolved.membership.role === "owner" ? (
         <>
           <RepoSettingsCard slug={slug} repoSlug={repoSlug} failThreshold={repo.failThreshold} />
+          <IgnoredRulesCard slug={slug} repoSlug={repoSlug} ignoredRuleIds={repo.ignoredRuleIds} />
           <GithubSettingsCard slug={slug} repoSlug={repoSlug} connected={!!repo.githubWebhookSecret} />
           <DangerZoneCard slug={slug} repoSlug={repoSlug} />
         </>

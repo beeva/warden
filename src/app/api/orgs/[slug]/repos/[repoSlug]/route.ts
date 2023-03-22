@@ -1,16 +1,23 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { deleteRepo, getOrgForMember, getRepoBySlug, logAudit, updateRepoFailThreshold } from "@/lib/db/queries";
+import { deleteRepo, getOrgForMember, getRepoBySlug, logAudit, updateRepoFailThreshold, updateRepoIgnoredRules } from "@/lib/db/queries";
 import { getSession } from "@/lib/auth/session";
 import { withErrorHandling } from "@/lib/api-error-handler";
 
 export const runtime = "nodejs";
 
-const bodySchema = z.object({ failThreshold: z.enum(["critical", "high", "medium", "low", "info"]) });
+const bodySchema = z
+  .object({
+    failThreshold: z.enum(["critical", "high", "medium", "low", "info"]).optional(),
+    ignoredRuleIds: z.array(z.string().min(1).max(200)).max(50).optional(),
+  })
+  .refine((body) => body.failThreshold !== undefined || body.ignoredRuleIds !== undefined, { message: "at least one field is required" });
 
-// Owner-only - this changes what a CI run treats as a hard block, which
-// is a deploy-gating decision, not routine triage (unlike a finding's
-// status, which any member can change).
+// Owner-only - both fields change what a CI run treats as a hard block
+// (the threshold directly, ignored rules by removing findings from
+// consideration entirely), which is a deploy-gating decision, not
+// routine triage (unlike a finding's status, which any member can
+// change).
 export const PATCH = withErrorHandling(async (request: Request, { params }: { params: Promise<{ slug: string; repoSlug: string }> }) => {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -20,7 +27,7 @@ export const PATCH = withErrorHandling(async (request: Request, { params }: { pa
   if (!resolved) return NextResponse.json({ error: "org not found" }, { status: 404 });
 
   if (resolved.membership.role !== "owner") {
-    return NextResponse.json({ error: "only an org owner can change a repo's CI-gate threshold" }, { status: 403 });
+    return NextResponse.json({ error: "only an org owner can change repo settings" }, { status: 403 });
   }
 
   const repo = await getRepoBySlug(resolved.org.id, repoSlug);
@@ -38,15 +45,29 @@ export const PATCH = withErrorHandling(async (request: Request, { params }: { pa
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "invalid input" }, { status: 400 });
   }
 
-  await updateRepoFailThreshold(repo.id, parsed.data.failThreshold);
-  await logAudit({
-    orgId: resolved.org.id,
-    actorUserId: session.userId,
-    action: "repo.fail_threshold_changed",
-    targetType: "repo",
-    targetId: repo.id,
-    metadata: { from: repo.failThreshold, to: parsed.data.failThreshold },
-  });
+  if (parsed.data.failThreshold !== undefined) {
+    await updateRepoFailThreshold(repo.id, parsed.data.failThreshold);
+    await logAudit({
+      orgId: resolved.org.id,
+      actorUserId: session.userId,
+      action: "repo.fail_threshold_changed",
+      targetType: "repo",
+      targetId: repo.id,
+      metadata: { from: repo.failThreshold, to: parsed.data.failThreshold },
+    });
+  }
+
+  if (parsed.data.ignoredRuleIds !== undefined) {
+    await updateRepoIgnoredRules(repo.id, parsed.data.ignoredRuleIds);
+    await logAudit({
+      orgId: resolved.org.id,
+      actorUserId: session.userId,
+      action: "repo.ignored_rules_changed",
+      targetType: "repo",
+      targetId: repo.id,
+      metadata: { from: repo.ignoredRuleIds, to: parsed.data.ignoredRuleIds },
+    });
+  }
 
   return NextResponse.json({ ok: true });
 });

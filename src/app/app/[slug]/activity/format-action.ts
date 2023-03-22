@@ -3,6 +3,7 @@ const LABELS: Record<string, string> = {
   "repo.created": "created a repo",
   "repo.deleted": "deleted a repo",
   "repo.fail_threshold_changed": "changed a repo's CI-gate threshold",
+  "repo.ignored_rules_changed": "changed a repo's ignored rules",
   "member.added": "added a member",
   "member.removed": "removed a member",
   "token.created": "created an API token",

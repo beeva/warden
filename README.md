@@ -160,6 +160,11 @@ npm run evals        # fixture-corpus precision/recall report, gated on recall
       exactly as before
 - [x] CSV export of a scan's findings - RFC 4180-shaped quoting, live-verified with real
       comma/quote-containing content and confirmed cross-org access correctly 404s
+- [x] Per-repo ignored rules - coarser than a `warden-ignore` comment (a whole rule for a whole
+      repo, not one line), filtered server-side before a finding is ever inserted so it can't
+      silently affect the CI-gate decision either. Live-verified: uploading the same findings
+      before/after ignoring floating-pragma dropped the info count from 1 to 0, and the row was
+      confirmed never inserted at all, not just hidden
 - [ ] More detectors
 
 ## License
