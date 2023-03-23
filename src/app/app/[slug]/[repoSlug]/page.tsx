@@ -55,7 +55,14 @@ export default async function RepoPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Scans</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Scans</CardTitle>
+            {scans.length > 1 ? (
+              <Link href={`/app/${slug}/${repoSlug}/compare`} className="text-sm text-steel-400 hover:text-cobalt-400">
+                Compare scans →
+              </Link>
+            ) : null}
+          </div>
         </CardHeader>
         <CardContent>
           {scans.length === 0 ? (

@@ -165,6 +165,10 @@ npm run evals        # fixture-corpus precision/recall report, gated on recall
       silently affect the CI-gate decision either. Live-verified: uploading the same findings
       before/after ignoring floating-pragma dropped the info count from 1 to 0, and the row was
       confirmed never inserted at all, not just hidden
+- [x] Compare any two scans, not just consecutive ones - a form picking from every scan for the
+      repo, listing the actual new/resolved findings (not just counts). Live-verified against
+      three real uploads: a finding that stayed present across both scans correctly showed up in
+      neither the new nor resolved list, only in the unchanged count
 - [ ] More detectors
 
 ## License
