@@ -32,7 +32,7 @@ should be checking on every single commit, not a human once a quarter.
 - Next.js (App Router) + TypeScript, Tailwind, Postgres via Drizzle
 - Session auth (scrypt password hashing, signed session cookies), multi-user orgs with
   owner/member roles
-- Real detector engine (`src/lib/detectors/`) - Solidity source is parsed into a real AST, then 17
+- Real detector engine (`src/lib/detectors/`) - Solidity source is parsed into a real AST, then 18
   detectors each walk it looking for one exploit class:
   - `reentrancy-state-change-after-call` - a low-level `.call(...)` followed by a state write in
     the same function, with no reentrancy guard (SWC-107)
@@ -62,9 +62,13 @@ should be checking on every single commit, not a human once a quarter.
     function anywhere that ever sends value back out - whole-contract analysis, not per-function,
     and deliberately silent on proxy contracts (a payable fallback that delegatecalls elsewhere
     delegates its entire logic, including any withdraw path, to a contract this scan can't see)
+  - `hash-collision-encode-packed` - `keccak256(abi.encodePacked(...))` with 2+ variable-length
+    arguments (string/bytes/a dynamic array) - no length delimiter between them means different
+    inputs can pack down to identical bytes (SWC-133), scoped to a function's own parameter types
+    so this is a real type check, not a guess based on variable naming
 - A fixture corpus (`fixtures/`) of real-shaped vulnerable contracts and their fixed counterparts,
   and an eval harness (`npm run evals`) reporting precision/recall against it - currently 100/100
-  on all 22 fixtures, gated strictly on recall (a missed finding is the dangerous failure mode for
+  on all 24 fixtures, gated strictly on recall (a missed finding is the dangerous failure mode for
   a security scanner; a false positive just costs a few minutes of review)
 - `// warden-ignore` / `// warden-ignore: rule-a, rule-b` suppression comments, matched on a
   finding's own line or the line above it (the `eslint-disable-next-line` convention)
@@ -169,6 +173,7 @@ npm run evals        # fixture-corpus precision/recall report, gated on recall
       repo, listing the actual new/resolved findings (not just counts). Live-verified against
       three real uploads: a finding that stayed present across both scans correctly showed up in
       neither the new nor resolved list, only in the unchanged count
+- [x] hash-collision-encode-packed detector, plus a fixture pair - 24/24 exact match
 - [ ] More detectors
 
 ## License

@@ -10,6 +10,7 @@
   { "file": "vulnerable/open-drain.sol", "expectedRuleIds": ["arbitrary-address-send"] },
   { "file": "vulnerable/strict-balance-check.sol", "expectedRuleIds": ["strict-balance-equality"] },
   { "file": "vulnerable/stuck-ether.sol", "expectedRuleIds": ["locked-ether"] },
+  { "file": "vulnerable/packed-hash-collision.sol", "expectedRuleIds": ["hash-collision-encode-packed"] },
   { "file": "safe/vault-guarded.sol", "expectedRuleIds": [] },
   { "file": "safe/access-controlled.sol", "expectedRuleIds": [] },
   { "file": "safe/fixed-proxy.sol", "expectedRuleIds": [] },
@@ -20,5 +21,6 @@
   { "file": "safe/nonce-protected-withdrawal.sol", "expectedRuleIds": [] },
   { "file": "safe/guarded-withdraw.sol", "expectedRuleIds": [] },
   { "file": "safe/threshold-balance-check.sol", "expectedRuleIds": [] },
-  { "file": "safe/withdrawable-ether.sol", "expectedRuleIds": [] }
+  { "file": "safe/withdrawable-ether.sol", "expectedRuleIds": [] },
+  { "file": "safe/encoded-no-collision.sol", "expectedRuleIds": [] }
 ]
