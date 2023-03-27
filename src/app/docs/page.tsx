@@ -86,6 +86,16 @@ curl -X POST https://your-warden-host/api/orgs/acme-labs/tokens \\
 
         <Card>
           <CardHeader>
+            <CardTitle>5. Add a status badge</CardTitle>
+            <CardDescription>Public and unauthenticated, like any CI badge - reflects the repo&apos;s own fail-threshold, updated within 60 seconds of the latest scan.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Code>{`![Warden](https://your-warden-host/api/orgs/acme-labs/repos/my-protocol/badge)`}</Code>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
             <CardTitle>Rate limits</CardTitle>
             <CardDescription>Per-IP, per-user, or per-token, in-process.</CardDescription>
           </CardHeader>

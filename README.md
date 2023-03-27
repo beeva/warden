@@ -174,6 +174,10 @@ npm run evals        # fixture-corpus precision/recall report, gated on recall
       three real uploads: a finding that stayed present across both scans correctly showed up in
       neither the new nor resolved list, only in the unchanged count
 - [x] hash-collision-encode-packed detector, plus a fixture pair - 24/24 exact match
+- [x] Public README status badge (`/api/orgs/:slug/repos/:repoSlug/badge`) - hand-rolled SVG, no
+      image library or external service call. Live-verified all four real states: unknown
+      org/repo, no scans yet, passing, and failing (against the repo's own fail-threshold, the
+      same rule the real CI gate uses)
 - [ ] More detectors
 
 ## License
