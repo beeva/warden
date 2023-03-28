@@ -37,6 +37,23 @@ export const orgMembers = pgTable(
   (table) => [unique("org_members_org_user_unique").on(table.orgId, table.userId)]
 );
 
+// A shareable link, not an email - there's no email service in this
+// deployment (the same honest constraint documented for adding an
+// existing member directly), so an owner copies /invites/:token and
+// sends it however they normally would. Single-use (acceptedByUserId
+// set on redemption) and time-limited, the same shape a real emailed
+// invite link would have.
+export const orgInvites = pgTable("org_invites", {
+  id: serial("id").primaryKey(),
+  orgId: integer("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+  token: text("token").notNull().unique(),
+  role: memberRoleEnum("role").notNull().default("member"),
+  createdByUserId: integer("created_by_user_id").references(() => users.id, { onDelete: "set null" }),
+  acceptedByUserId: integer("accepted_by_user_id").references(() => users.id, { onDelete: "set null" }),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const repos = pgTable(
   "repos",
   {
@@ -162,3 +179,4 @@ export type ScanStatus = (typeof scanStatusEnum.enumValues)[number];
 export type ScanSource = (typeof scanSourceEnum.enumValues)[number];
 export type WebhookDelivery = typeof webhookDeliveries.$inferSelect;
 export type WebhookDeliveryStatus = (typeof webhookDeliveryStatusEnum.enumValues)[number];
+export type OrgInvite = typeof orgInvites.$inferSelect;

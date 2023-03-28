@@ -43,6 +43,13 @@
       "when": 1790254223431,
       "tag": "0005_yellow_purple_man",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790259299968,
+      "tag": "0006_wakeful_strong_guy",
+      "breakpoints": true
     }
   ]
 }

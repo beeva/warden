@@ -1,7 +1,7 @@
 import "server-only";
-import { and, desc, eq, lt, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, lt, sql } from "drizzle-orm";
 import { db } from "./client";
-import { apiTokens, auditLog, findings, orgMembers, orgs, repos, scans, users, webhookDeliveries } from "./schema";
+import { apiTokens, auditLog, findings, orgInvites, orgMembers, orgs, repos, scans, users, webhookDeliveries } from "./schema";
 import type { FindingStatus, ScanSource, ScanStatus, Severity, WebhookDeliveryStatus } from "./schema";
 
 export async function getUserByEmail(email: string) {
@@ -93,6 +93,49 @@ export async function getOrgMemberById(orgId: number, memberId: number) {
     .where(and(eq(orgMembers.id, memberId), eq(orgMembers.orgId, orgId)))
     .limit(1);
   return member ?? null;
+}
+
+export async function createOrgInvite(orgId: number, token: string, role: "owner" | "member", createdByUserId: number, expiresAt: Date) {
+  const [invite] = await db.insert(orgInvites).values({ orgId, token, role, createdByUserId, expiresAt }).returning();
+  if (!invite) throw new Error("failed to create invite");
+  return invite;
+}
+
+export async function getOrgInviteByToken(token: string) {
+  const [invite] = await db.select().from(orgInvites).where(eq(orgInvites.token, token)).limit(1);
+  return invite ?? null;
+}
+
+export async function listPendingOrgInvites(orgId: number) {
+  return db
+    .select()
+    .from(orgInvites)
+    .where(and(eq(orgInvites.orgId, orgId), isNull(orgInvites.acceptedByUserId)))
+    .orderBy(desc(orgInvites.createdAt));
+}
+
+export async function revokeOrgInvite(inviteId: number) {
+  await db.delete(orgInvites).where(eq(orgInvites.id, inviteId));
+}
+
+/** An invite scoped to the given org, not a bare id lookup - so an owner of org A can't revoke org B's invite by guessing an id. */
+export async function getOrgInviteScoped(orgId: number, inviteId: number) {
+  const [invite] = await db.select().from(orgInvites).where(and(eq(orgInvites.id, inviteId), eq(orgInvites.orgId, orgId))).limit(1);
+  return invite ?? null;
+}
+
+/**
+ * Marks the invite accepted and adds the membership in one transaction -
+ * an invite redeemed twice in a race (two tabs, a double-click) should
+ * add at most one membership, and a membership add that somehow failed
+ * shouldn't leave the invite silently burned with no membership to show
+ * for it.
+ */
+export async function acceptOrgInvite(inviteId: number, orgId: number, userId: number, role: "owner" | "member") {
+  await db.transaction(async (tx) => {
+    await tx.update(orgInvites).set({ acceptedByUserId: userId }).where(eq(orgInvites.id, inviteId));
+    await tx.insert(orgMembers).values({ orgId, userId, role }).onConflictDoNothing();
+  });
 }
 
 export async function listOrgMembers(orgId: number) {
