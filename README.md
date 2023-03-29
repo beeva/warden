@@ -178,6 +178,13 @@ npm run evals        # fixture-corpus precision/recall report, gated on recall
       image library or external service call. Live-verified all four real states: unknown
       org/repo, no scans yet, passing, and failing (against the repo's own fail-threshold, the
       same rule the real CI gate uses)
+- [x] Invite-link flow for adding members - closes the "no invite email" gap noted in
+      [SECURITY.md](./SECURITY.md). Single-use, 7-day expiry, owner-only to create. Live-verified
+      end to end with two real accounts: create → public preview (unauthenticated) → accept → a
+      real membership row, a second accept attempt correctly 410s, and an unauthenticated accept
+      attempt correctly 401s. Also added `?next=` support to login (with open-redirect protection
+      - only a same-origin relative path is honored) so accepting an invite while logged out
+      returns you to the invite after signing in
 - [ ] More detectors
 
 ## License

@@ -13,6 +13,8 @@ const LABELS: Record<string, string> = {
   "slack.disconnected": "disconnected Slack",
   "github.connected": "connected a GitHub repo",
   "github.disconnected": "disconnected a GitHub repo",
+  "invite.created": "created an invite link",
+  "invite.revoked": "revoked an invite link",
 };
 
 export function formatAction(action: string): string {

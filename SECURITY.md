@@ -54,12 +54,21 @@ isn't telling the whole story.
   scan results as if they were CI, against any repo in the org, with no further check). Changing a
   finding's status is deliberately *not* owner-gated - triage is routine day-to-day work, not a
   privileged action - but every status change still lands in the audit log with who made it.
-- **Adding a member lets an owner learn whether an arbitrary email has a Warden account** (a 404
-  "no account with this email exists yet" vs. a 409 "already a member"). This is inherent to the
-  "add an existing account" design - there's no invite-by-email flow, since there's no email to
-  send one through - and is rate-limited (20/hour) but not eliminated. A real product might accept
-  this same tradeoff or spend the effort on a proper invite flow; noted here as a known,
-  understood gap rather than something silently left unaddressed.
+- **Adding a member by email lets an owner learn whether an arbitrary email has a Warden account**
+  (a 404 "no account with this email exists yet" vs. a 409 "already a member"). This is inherent
+  to the "add an existing account" design and is rate-limited (20/hour) but not eliminated - noted
+  as a known, understood gap for that specific path rather than something silently left
+  unaddressed. The invite-link flow below doesn't have this problem at all (it never takes an
+  email as input), and is the recommended way to add someone who doesn't have an account yet.
+- **Invite links are single-use, time-limited (7 days), and owner-only to create** - a token is
+  the sole credential (there's no email service in this deployment, so the owner copies a link and
+  sends it however they normally would), stored and matched directly rather than hashed, since
+  unlike a password there's nothing to look up by anything other than the exact token itself.
+  Accepting requires a real session (the preview endpoint, `GET /api/invites/:token`, is
+  deliberately public - it only returns an org name and a role, enough to decide whether to accept
+  before signing up or logging in, the same preview-before-auth pattern Slack/GitHub invite links
+  use) and is wrapped in a single DB transaction with the membership insert, so a double-accept
+  race (two tabs, a double-click) can mark the invite used without ever creating two memberships.
 - **Session auth** (`src/lib/auth/session.ts`) is a signed (HS256) JWT in an httpOnly,
   `sameSite: lax` cookie, verified by `src/middleware.ts` before any `/app/*` page renders - not a
   layout-level `redirect()`, which Next can stream a protected page's RSC payload around in some
@@ -67,6 +76,11 @@ isn't telling the whole story.
 - **Login doesn't leak which emails have accounts.** A nonexistent email is checked against a
   fixed dummy scrypt hash before responding, so the "no such account" and "wrong password" paths
   cost the same wall-clock time and aren't distinguishable by timing.
+- **Login's post-auth redirect (`?next=`, used to return to an invite link after signing in) only
+  honors a same-origin, single-leading-slash relative path** - `//evil.com` and `https://evil.com`
+  are both rejected in favor of a safe `/app` fallback. An unvalidated `next` param redirecting
+  after login is a classic open-redirect vector, and an invite link is exactly the kind of URL
+  people click without much scrutiny, which is what makes it worth guarding here specifically.
 - **The CLI is meant to scan code you don't yet trust, so it's built to not fall over on it.** A
   single unreadable file no longer aborts the whole `warden scan` invocation (each file's
   read+scan is now independently caught and reported as that file's own parse error), and a file

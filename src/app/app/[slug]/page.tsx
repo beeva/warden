@@ -1,12 +1,13 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { getSession } from "@/lib/auth/session";
-import { getOrgForMember, latestScanSummary, listApiTokensForOrg, listOrgMembers, listReposForOrg, orgFindingCounts } from "@/lib/db/queries";
+import { getOrgForMember, latestScanSummary, listApiTokensForOrg, listOrgMembers, listPendingOrgInvites, listReposForOrg, orgFindingCounts } from "@/lib/db/queries";
 import type { Severity } from "@/lib/db/schema";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatRelativeTime } from "@/lib/utils";
 import { AppNavBar } from "@/components/account-menu";
+import { InvitesCard } from "./invites-card";
 import { MembersCard } from "./members-card";
 import { RepoCreateForm } from "./repo-create-form";
 import { SlackSettingsCard } from "./slack-settings-card";
@@ -25,11 +26,12 @@ export default async function OrgPage({ params }: { params: Promise<{ slug: stri
   const resolved = await getOrgForMember(slug, session.userId);
   if (!resolved) notFound();
 
-  const [repos, members, tokens, findingCounts] = await Promise.all([
+  const [repos, members, tokens, findingCounts, invites] = await Promise.all([
     listReposForOrg(resolved.org.id),
     listOrgMembers(resolved.org.id),
     listApiTokensForOrg(resolved.org.id),
     orgFindingCounts(resolved.org.id),
+    resolved.membership.role === "owner" ? listPendingOrgInvites(resolved.org.id) : Promise.resolve([]),
   ]);
 
   const summaries = await Promise.all(repos.map((repo) => latestScanSummary(repo.id)));
@@ -105,6 +107,9 @@ export default async function OrgPage({ params }: { params: Promise<{ slug: stri
       </Card>
 
       <MembersCard slug={slug} members={members} isOwner={isOwner} />
+      {isOwner ? (
+        <InvitesCard slug={slug} invites={invites.map((i) => ({ ...i, expiresAt: i.expiresAt.toISOString(), createdAt: i.createdAt.toISOString() }))} />
+      ) : null}
       <TokensCard slug={slug} tokens={tokens.map((t) => ({ ...t, createdAt: t.createdAt.toISOString(), lastUsedAt: t.lastUsedAt?.toISOString() ?? null }))} isOwner={isOwner} />
       {isOwner ? <SlackSettingsCard slug={slug} connected={!!resolved.org.slackWebhookUrl} /> : null}
       </main>
