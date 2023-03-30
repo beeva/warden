@@ -9,6 +9,7 @@ import { reentrancyDetector } from "./rules/reentrancy";
 import { signatureReplayDetector } from "./rules/signature-replay";
 import { strictBalanceEqualityDetector } from "./rules/strict-balance-equality";
 import { timestampDependenceDetector } from "./rules/timestamp-dependence";
+import { txOriginAsRecipientDetector } from "./rules/tx-origin-as-recipient";
 import { txOriginAuthDetector } from "./rules/tx-origin-auth";
 import { unboundedLoopDetector } from "./rules/unbounded-loop";
 import { uncheckedCallDetector } from "./rules/unchecked-call";
@@ -37,6 +38,7 @@ export const detectorRegistry: Detector[] = [
   strictBalanceEqualityDetector,
   lockedEtherDetector,
   hashCollisionEncodePackedDetector,
+  txOriginAsRecipientDetector,
 ];
 
 export function getDetector(id: string): Detector | undefined {
