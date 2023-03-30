@@ -32,7 +32,7 @@ should be checking on every single commit, not a human once a quarter.
 - Next.js (App Router) + TypeScript, Tailwind, Postgres via Drizzle
 - Session auth (scrypt password hashing, signed session cookies), multi-user orgs with
   owner/member roles
-- Real detector engine (`src/lib/detectors/`) - Solidity source is parsed into a real AST, then 18
+- Real detector engine (`src/lib/detectors/`) - Solidity source is parsed into a real AST, then 19
   detectors each walk it looking for one exploit class:
   - `reentrancy-state-change-after-call` - a low-level `.call(...)` followed by a state write in
     the same function, with no reentrancy guard (SWC-107)
@@ -66,9 +66,12 @@ should be checking on every single commit, not a human once a quarter.
     arguments (string/bytes/a dynamic array) - no length delimiter between them means different
     inputs can pack down to identical bytes (SWC-133), scoped to a function's own parameter types
     so this is a real type check, not a guess based on variable naming
+  - `tx-origin-as-recipient` - `tx.origin` used as the destination of a value transfer or an ERC20
+    `transfer`/`transferFrom`, rather than `msg.sender` - a distinct confused-deputy hazard from
+    the auth-comparison case above (same root cause, different exploit shape)
 - A fixture corpus (`fixtures/`) of real-shaped vulnerable contracts and their fixed counterparts,
   and an eval harness (`npm run evals`) reporting precision/recall against it - currently 100/100
-  on all 24 fixtures, gated strictly on recall (a missed finding is the dangerous failure mode for
+  on all 26 fixtures, gated strictly on recall (a missed finding is the dangerous failure mode for
   a security scanner; a false positive just costs a few minutes of review)
 - `// warden-ignore` / `// warden-ignore: rule-a, rule-b` suppression comments, matched on a
   finding's own line or the line above it (the `eslint-disable-next-line` convention)
@@ -185,6 +188,7 @@ npm run evals        # fixture-corpus precision/recall report, gated on recall
       attempt correctly 401s. Also added `?next=` support to login (with open-redirect protection
       - only a same-origin relative path is honored) so accepting an invite while logged out
       returns you to the invite after signing in
+- [x] tx-origin-as-recipient detector, plus a fixture pair - 26/26 exact match
 - [ ] More detectors
 
 ## License
