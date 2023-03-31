@@ -44,6 +44,11 @@ export async function setOrgSlackWebhookUrl(orgId: number, slackWebhookUrl: stri
   await db.update(orgs).set({ slackWebhookUrl }).where(eq(orgs.id, orgId));
 }
 
+/** Cascades to every repo (and each repo's own scans/findings/webhook deliveries), member, API token, and invite for this org - the single most destructive action in the product. */
+export async function deleteOrg(orgId: number) {
+  await db.delete(orgs).where(eq(orgs.id, orgId));
+}
+
 export async function addOrgMember(orgId: number, userId: number, role: "owner" | "member") {
   const [member] = await db.insert(orgMembers).values({ orgId, userId, role }).returning();
   if (!member) throw new Error("failed to add org member");
