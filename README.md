@@ -189,6 +189,11 @@ npm run evals        # fixture-corpus precision/recall report, gated on recall
       - only a same-origin relative path is honored) so accepting an invite while logged out
       returns you to the invite after signing in
 - [x] tx-origin-as-recipient detector, plus a fixture pair - 26/26 exact match
+- [x] Org deletion - owner-only, type-to-confirm, cascades to every repo (and each repo's own
+      scans/findings/webhook deliveries), member, API token, and invite. Live-verified: an
+      outsider gets a generic 404 (not a 403 that would confirm the org exists), the owner's
+      delete succeeds, and a direct query confirmed the org, its repo, its API token, and the
+      scan/finding rows were all genuinely gone afterward
 - [ ] More detectors
 
 ## License

@@ -9,6 +9,7 @@ import { formatRelativeTime } from "@/lib/utils";
 import { AppNavBar } from "@/components/account-menu";
 import { InvitesCard } from "./invites-card";
 import { MembersCard } from "./members-card";
+import { OrgDangerZoneCard } from "./org-danger-zone-card";
 import { RepoCreateForm } from "./repo-create-form";
 import { SlackSettingsCard } from "./slack-settings-card";
 import { TokensCard } from "./tokens-card";
@@ -112,6 +113,7 @@ export default async function OrgPage({ params }: { params: Promise<{ slug: stri
       ) : null}
       <TokensCard slug={slug} tokens={tokens.map((t) => ({ ...t, createdAt: t.createdAt.toISOString(), lastUsedAt: t.lastUsedAt?.toISOString() ?? null }))} isOwner={isOwner} />
       {isOwner ? <SlackSettingsCard slug={slug} connected={!!resolved.org.slackWebhookUrl} /> : null}
+      {isOwner ? <OrgDangerZoneCard slug={slug} /> : null}
       </main>
     </>
   );
