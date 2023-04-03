@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { formatRelativeTime } from "@/lib/utils";
 import { AppNavBar } from "@/components/account-menu";
 import { InvitesCard } from "./invites-card";
+import { LeaveOrgButton } from "./leave-org-button";
 import { MembersCard } from "./members-card";
 import { OrgDangerZoneCard } from "./org-danger-zone-card";
 import { RepoCreateForm } from "./repo-create-form";
@@ -47,9 +48,12 @@ export default async function OrgPage({ params }: { params: Promise<{ slug: stri
       <main className="container-page flex flex-col gap-8 py-16">
       <div className="flex items-center justify-between">
         <h1 className="font-display text-2xl text-steel-50">{resolved.org.name}</h1>
-        <Link href={`/app/${slug}/activity`} className="text-sm text-steel-400 hover:text-cobalt-400">
-          Activity →
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href={`/app/${slug}/activity`} className="text-sm text-steel-400 hover:text-cobalt-400">
+            Activity →
+          </Link>
+          <LeaveOrgButton slug={slug} />
+        </div>
       </div>
 
       <Card>

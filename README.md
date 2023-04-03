@@ -194,6 +194,10 @@ npm run evals        # fixture-corpus precision/recall report, gated on recall
       outsider gets a generic 404 (not a 403 that would confirm the org exists), the owner's
       delete succeeds, and a direct query confirmed the org, its repo, its API token, and the
       scan/finding rows were all genuinely gone afterward
+- [x] Self-service "leave org" - any member (owner or not) can remove themselves without needing
+      another owner to act for them, guarded by the same last-owner check member removal already
+      has. Live-verified: a sole owner is correctly blocked with 409, a regular member leaves
+      successfully and their membership row is confirmed gone
 - [ ] More detectors
 
 ## License
