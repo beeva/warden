@@ -15,6 +15,7 @@ const LABELS: Record<string, string> = {
   "github.disconnected": "disconnected a GitHub repo",
   "invite.created": "created an invite link",
   "invite.revoked": "revoked an invite link",
+  "member.left": "left the org",
 };
 
 export function formatAction(action: string): string {
