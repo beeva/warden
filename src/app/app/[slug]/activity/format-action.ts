@@ -16,6 +16,7 @@ const LABELS: Record<string, string> = {
   "invite.created": "created an invite link",
   "invite.revoked": "revoked an invite link",
   "member.left": "left the org",
+  "member.role_changed": "changed a member's role",
 };
 
 export function formatAction(action: string): string {
@@ -31,6 +32,7 @@ export function formatDetail(action: string, metadata: unknown): string | null {
     case "finding.status_changed":
       return typeof m.from === "string" && typeof m.to === "string" ? `${m.from} → ${m.to}` : null;
     case "repo.fail_threshold_changed":
+    case "member.role_changed":
       return typeof m.from === "string" && typeof m.to === "string" ? `${m.from} → ${m.to}` : null;
     case "scan.completed": {
       const counts = m.counts as Record<string, number> | undefined;

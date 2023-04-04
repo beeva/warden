@@ -25,6 +25,10 @@ describe("formatDetail", () => {
     expect(formatDetail("scan.completed", { counts: { critical: 0, high: 0, medium: 0, low: 0, info: 0 } })).toBe("no findings");
   });
 
+  it("summarizes a member role change", () => {
+    expect(formatDetail("member.role_changed", { from: "member", to: "owner" })).toBe("member → owner");
+  });
+
   it("returns null for an action with no useful metadata to show", () => {
     expect(formatDetail("member.added", { anything: "here" })).toBeNull();
     expect(formatDetail("token.created", null)).toBeNull();

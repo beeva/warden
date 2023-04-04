@@ -100,6 +100,10 @@ export async function getOrgMemberById(orgId: number, memberId: number) {
   return member ?? null;
 }
 
+export async function updateOrgMemberRole(memberId: number, role: "owner" | "member") {
+  await db.update(orgMembers).set({ role }).where(eq(orgMembers.id, memberId));
+}
+
 export async function createOrgInvite(orgId: number, token: string, role: "owner" | "member", createdByUserId: number, expiresAt: Date) {
   const [invite] = await db.insert(orgInvites).values({ orgId, token, role, createdByUserId, expiresAt }).returning();
   if (!invite) throw new Error("failed to create invite");
