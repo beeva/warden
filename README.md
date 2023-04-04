@@ -198,6 +198,11 @@ npm run evals        # fixture-corpus precision/recall report, gated on recall
       another owner to act for them, guarded by the same last-owner check member removal already
       has. Live-verified: a sole owner is correctly blocked with 409, a regular member leaves
       successfully and their membership row is confirmed gone
+- [x] Change a member's role (promote to owner / demote to member), completing the org governance
+      story alongside add/remove/leave/delete - guarded by the same last-owner check throughout.
+      Live-verified a full ownership transfer end to end: demoting the sole owner correctly 409s,
+      promoting the other member to owner succeeds, and only then does demoting the original
+      owner succeed - confirmed by a direct query showing the roles had actually swapped
 - [ ] More detectors
 
 ## License
