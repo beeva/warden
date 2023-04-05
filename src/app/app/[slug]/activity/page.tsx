@@ -32,7 +32,14 @@ export default async function ActivityPage({ params }: { params: Promise<{ slug:
 
         <Card>
           <CardHeader>
-            <CardTitle>Recent activity</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>Recent activity</CardTitle>
+              {entries.length > 0 ? (
+                <a href={`/api/orgs/${slug}/activity/export`} className="text-xs text-cobalt-400 hover:text-cobalt-300">
+                  Export CSV
+                </a>
+              ) : null}
+            </div>
           </CardHeader>
           <CardContent>
             {entries.length === 0 ? (

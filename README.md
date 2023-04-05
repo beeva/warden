@@ -203,6 +203,9 @@ npm run evals        # fixture-corpus precision/recall report, gated on recall
       Live-verified a full ownership transfer end to end: demoting the sole owner correctly 409s,
       promoting the other member to owner succeeds, and only then does demoting the original
       owner succeed - confirmed by a direct query showing the roles had actually swapped
+- [x] CSV export of the activity log - `csvField`/`toCsv` pulled into a shared `src/lib/csv.ts`
+      used by both the findings export and this one, rather than duplicating the same escaping
+      logic twice. Live-verified against a real repo-creation event
 - [ ] More detectors
 
 ## License
