@@ -5,6 +5,7 @@ import { db } from "../../src/lib/db/client";
 import { orgs, users } from "../../src/lib/db/schema";
 import { eq } from "drizzle-orm";
 import {
+  acceptOrgInvite,
   addOrgMember,
   completeScan,
   countFindingsForScan,
@@ -12,9 +13,11 @@ import {
   countScansForRepo,
   createApiToken,
   createOrg,
+  createOrgInvite,
   createRepo,
   createScan,
   createUser,
+  deleteOrg,
   deleteRepo,
   getApiTokenByHash,
   getFindingById,
@@ -22,6 +25,8 @@ import {
   getOrgById,
   getOrgBySlug,
   getOrgForMember,
+  getOrgInviteByToken,
+  getOrgInviteScoped,
   getOrgMemberById,
   getRepoBySlug,
   getScanById,
@@ -30,14 +35,17 @@ import {
   listAuditLogForOrg,
   listFindingsForScan,
   listOrgMembers,
+  listPendingOrgInvites,
   listReposForOrg,
   listScansForRepo,
   logAudit,
   removeOrgMember,
   repoBelongsToOrg,
+  revokeOrgInvite,
   scanBelongsToOrg,
   setFindingStatus,
   setOrgSlackWebhookUrl,
+  updateOrgMemberRole,
   updateRepoFailThreshold,
 } from "../../src/lib/db/queries";
 
@@ -241,5 +249,90 @@ describe("queries (integration, real Postgres)", () => {
 
   it("does not resolve a nonexistent org slug at all", async () => {
     expect(await getOrgBySlug(`no-such-org-${suffix}`)).toBeNull();
+  });
+
+  it("runs a full invite lifecycle - create, preview, accept, and a real membership row", async () => {
+    const invitee = await createUser(`it-invitee-${suffix}@example.com`, "hash");
+    try {
+      const expiresAt = new Date(Date.now() + 60_000);
+      const invite = await createOrgInvite(orgId, `it-token-${suffix}`, "member", ownerId, expiresAt);
+
+      const fetched = await getOrgInviteByToken(`it-token-${suffix}`);
+      expect(fetched?.id).toBe(invite.id);
+      expect(fetched?.acceptedByUserId).toBeNull();
+
+      const pending = await listPendingOrgInvites(orgId);
+      expect(pending.map((i) => i.id)).toContain(invite.id);
+
+      await acceptOrgInvite(invite.id, orgId, invitee.id, "member");
+
+      const accepted = await getOrgInviteByToken(`it-token-${suffix}`);
+      expect(accepted?.acceptedByUserId).toBe(invitee.id);
+
+      const membership = await getMembership(orgId, invitee.id);
+      expect(membership?.role).toBe("member");
+
+      // An accepted invite is no longer pending.
+      const pendingAfter = await listPendingOrgInvites(orgId);
+      expect(pendingAfter.map((i) => i.id)).not.toContain(invite.id);
+    } finally {
+      await removeOrgMember(orgId, invitee.id);
+      await db.delete(users).where(eq(users.id, invitee.id));
+    }
+  });
+
+  it("revokes a pending invite and scopes the lookup to the right org", async () => {
+    const expiresAt = new Date(Date.now() + 60_000);
+    const invite = await createOrgInvite(orgId, `it-revoke-token-${suffix}`, "member", ownerId, expiresAt);
+
+    const otherOrg = await createOrg(`it-invite-scope-org-${suffix}`, "Invite Scope Org");
+    try {
+      expect(await getOrgInviteScoped(otherOrg.id, invite.id)).toBeNull();
+      expect(await getOrgInviteScoped(orgId, invite.id)).not.toBeNull();
+    } finally {
+      await db.delete(orgs).where(eq(orgs.id, otherOrg.id));
+    }
+
+    await revokeOrgInvite(invite.id);
+    expect(await getOrgInviteByToken(`it-revoke-token-${suffix}`)).toBeNull();
+  });
+
+  it("changes a member's role and reports the owner count correctly, in both directions", async () => {
+    expect(await countOrgOwners(orgId)).toBe(1);
+
+    const membership = await getMembership(orgId, memberId);
+    if (!membership) throw new Error("setup failed: member not found");
+
+    await updateOrgMemberRole(membership.id, "owner");
+    expect(await countOrgOwners(orgId)).toBe(2);
+    expect((await getMembership(orgId, memberId))?.role).toBe("owner");
+
+    // Restore the original role so later tests (and reruns within this
+    // file) see the same starting state this suite's beforeAll set up.
+    await updateOrgMemberRole(membership.id, "member");
+    expect(await countOrgOwners(orgId)).toBe(1);
+    expect((await getMembership(orgId, memberId))?.role).toBe("member");
+  });
+
+  it("deletes an org and cascades to its repos, members, and invites - using a disposable org, not the shared fixture", async () => {
+    const disposableOwner = await createUser(`it-disposable-owner-${suffix}@example.com`, "hash");
+    const disposableOrg = await createOrg(`it-disposable-org-${suffix}`, "Disposable Org");
+    await addOrgMember(disposableOrg.id, disposableOwner.id, "owner");
+    const disposableRepo = await createRepo(disposableOrg.id, "it-disposable-repo", "Disposable Repo");
+    await createOrgInvite(disposableOrg.id, `it-disposable-token-${suffix}`, "member", disposableOwner.id, new Date(Date.now() + 60_000));
+
+    try {
+      await deleteOrg(disposableOrg.id);
+
+      expect(await getOrgById(disposableOrg.id)).toBeNull();
+      expect(await getRepoBySlug(disposableOrg.id, "it-disposable-repo")).toBeNull();
+      expect(await getOrgInviteByToken(`it-disposable-token-${suffix}`)).toBeNull();
+      // repoBelongsToOrg should report false once both the repo and the org are gone.
+      expect(await repoBelongsToOrg(disposableRepo.id, disposableOrg.id)).toBe(false);
+    } finally {
+      // deleteOrg doesn't touch the users table - clean up regardless of
+      // whether the assertions above passed.
+      await db.delete(users).where(eq(users.id, disposableOwner.id));
+    }
   });
 });

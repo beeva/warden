@@ -211,6 +211,9 @@ npm run evals        # fixture-corpus precision/recall report, gated on recall
       logic twice. Live-verified against a real repo-creation event
 - [x] ecrecover-unchecked-zero-address detector (20th detector), plus a fixture pair - 28/28 exact
       match
+- [x] Integration tests for the invite lifecycle, member role changes, and org deletion - these
+      had only been verified manually against the running server until now; 18 integration tests
+      total against real Postgres, up from 14, with clean teardown confirmed by a direct query
 - [ ] More detectors
 
 ## License
