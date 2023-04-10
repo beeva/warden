@@ -113,6 +113,7 @@ npm run test        # unit tests (Vitest) - detectors are hand-verified against 
 npm run typecheck
 npm run lint
 npm run evals        # fixture-corpus precision/recall report, gated on recall
+npm run smoke        # end-to-end smoke test against a real running server (npm run dev first)
 ```
 
 ## Roadmap
@@ -214,6 +215,11 @@ npm run evals        # fixture-corpus precision/recall report, gated on recall
 - [x] Integration tests for the invite lifecycle, member role changes, and org deletion - these
       had only been verified manually against the running server until now; 18 integration tests
       total against real Postgres, up from 14, with clean teardown confirmed by a direct query
+- [x] `npm run smoke` - a repeatable end-to-end smoke test (signup → repo → token → scan upload →
+      CI-gate decision → status badge) against a real running server, formalizing the ad-hoc curl
+      sequences this project was actually verified with throughout development. Live-run: 7/7
+      steps passed against the real dev server, cleanup confirmed by a direct query, and the
+      unreachable-server failure path correctly exits nonzero with a clear message
 - [ ] More detectors
 
 ## License

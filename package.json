@@ -27,7 +27,8 @@
     "db:migrate": "tsx scripts/migrate.ts",
     "db:seed": "tsx scripts/seed.ts",
     "evals": "tsx scripts/evals.ts",
-    "scan": "tsx src/cli/index.ts"
+    "scan": "tsx src/cli/index.ts",
+    "smoke": "tsx scripts/smoke-test.ts"
   },
   "dependencies": {
     "@solidity-parser/parser": "^0.19.0",
