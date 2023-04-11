@@ -5,6 +5,7 @@ import { Command } from "commander";
 import { scanSource } from "../lib/detectors/scan";
 import type { Severity } from "../lib/detectors/types";
 import { findSolidityFiles } from "../lib/find-solidity-files";
+import { loadConfig } from "./config";
 import { countBySeverity, formatResults, formatResultsJson } from "./format";
 import { wardenWorkflowTemplate } from "./init-template";
 import { meetsThreshold } from "./severity";
@@ -28,18 +29,20 @@ program
   .command("scan")
   .description("Scan Solidity files or a directory for known exploit-class patterns")
   .argument("<path>", "file or directory to scan")
-  .option("--fail-on <severity>", `exit non-zero if a finding at or above this severity exists (${SEVERITIES.join("|")})`, "critical")
+  .option("--fail-on <severity>", `exit non-zero if a finding at or above this severity exists (${SEVERITIES.join("|")}) (falls back to warden.config.json, then "critical")`)
   .option("--no-fail", "always exit 0, regardless of findings")
   .option("--no-color", "disable ANSI color in output")
   .option("--format <text|json>", "output format", "text")
   .option("--upload", "upload results to the Warden dashboard (requires --repo, --token or WARDEN_TOKEN)")
-  .option("--repo <slug>", "repo slug to upload against")
+  .option("--repo <slug>", "repo slug to upload against (falls back to warden.config.json)")
   .option("--token <token>", "API token (falls back to WARDEN_TOKEN env var)")
   .option("--api-url <url>", "dashboard API base URL", process.env.WARDEN_API_URL ?? "http://localhost:3522")
   .option("--commit <sha>", "commit SHA to associate with this scan")
   .option("--branch <name>", "branch name to associate with this scan")
   .action(async (targetPath: string, opts) => {
-    const failOn = opts.failOn as string;
+    const config = loadConfig(process.cwd());
+
+    const failOn = (opts.failOn ?? config.failOn ?? "critical") as string;
     if (!SEVERITIES.includes(failOn as Severity)) {
       console.error(`--fail-on must be one of: ${SEVERITIES.join(", ")}`);
       process.exitCode = 2;
@@ -54,7 +57,9 @@ program
     }
     const isJson = format === "json";
 
-    const files = findSolidityFiles(targetPath);
+    const repoSlug = (opts.repo ?? config.repo) as string | undefined;
+
+    const files = findSolidityFiles(targetPath, config.exclude ?? []);
     if (files.length === 0) {
       console.error(`no .sol files found under ${targetPath}`);
       process.exitCode = 2;
@@ -87,8 +92,8 @@ program
 
     if (opts.upload) {
       const token = opts.token ?? process.env.WARDEN_TOKEN;
-      if (!token || !opts.repo) {
-        const message = "--upload requires --repo and a token (--token or WARDEN_TOKEN)";
+      if (!token || !repoSlug) {
+        const message = "--upload requires --repo (or a repo in warden.config.json) and a token (--token or WARDEN_TOKEN)";
         if (isJson) {
           uploadOutcome = { error: message };
         } else {
@@ -101,7 +106,7 @@ program
           const uploaded = await uploadResults(results, {
             apiUrl: opts.apiUrl,
             token,
-            repoSlug: opts.repo,
+            repoSlug,
             commitSha: opts.commit,
             branch: opts.branch,
           });

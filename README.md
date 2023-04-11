@@ -220,6 +220,12 @@ npm run smoke        # end-to-end smoke test against a real running server (npm 
       sequences this project was actually verified with throughout development. Live-run: 7/7
       steps passed against the real dev server, cleanup confirmed by a direct query, and the
       unreachable-server failure path correctly exits nonzero with a clear message
+- [x] `warden.config.json` - optional per-repo config (`failOn`, `repo`, `exclude`), the same
+      convention eslint/prettier use, so CI doesn't have to repeat `--fail-on`/`--repo` on every
+      invocation. CLI flags still take precedence; a missing or malformed file falls back to
+      defaults with a stderr warning rather than crashing the scan. Live-verified: a config-only
+      `failOn` actually flips the exit code with no CLI flag present, and an `exclude` entry
+      actually removes a vendored contract from the scan
 - [ ] More detectors
 
 ## License
