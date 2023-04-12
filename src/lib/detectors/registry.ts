@@ -1,6 +1,7 @@
 import { arbitraryAddressSendDetector } from "./rules/arbitrary-address-send";
 import { delegatecallUntrustedDetector } from "./rules/delegatecall-untrusted";
 import { deprecatedConstructsDetector } from "./rules/deprecated-constructs";
+import { divideBeforeMultiplyDetector } from "./rules/divide-before-multiply";
 import { ecrecoverZeroAddressDetector } from "./rules/ecrecover-zero-address";
 import { floatingPragmaDetector } from "./rules/floating-pragma";
 import { hashCollisionEncodePackedDetector } from "./rules/hash-collision-encode-packed";
@@ -41,6 +42,7 @@ export const detectorRegistry: Detector[] = [
   hashCollisionEncodePackedDetector,
   txOriginAsRecipientDetector,
   ecrecoverZeroAddressDetector,
+  divideBeforeMultiplyDetector,
 ];
 
 export function getDetector(id: string): Detector | undefined {

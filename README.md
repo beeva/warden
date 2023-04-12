@@ -226,6 +226,9 @@ npm run smoke        # end-to-end smoke test against a real running server (npm 
       defaults with a stderr warning rather than crashing the scan. Live-verified: a config-only
       `failOn` actually flips the exit code with no CLI flag present, and an `exclude` entry
       actually removes a vendored contract from the scan
+- [x] divide-before-multiply detector (21st detector) - flags a division whose result feeds
+      straight into a multiplication (`(a / b) * c`), which compounds Solidity's integer
+      truncation instead of reordering to divide last; 30/30 exact match on the fixture corpus
 - [ ] More detectors
 
 ## License
