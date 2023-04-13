@@ -79,7 +79,8 @@ should be checking on every single commit, not a human once a quarter.
 - `// warden-ignore` / `// warden-ignore: rule-a, rule-b` suppression comments, matched on a
   finding's own line or the line above it (the `eslint-disable-next-line` convention)
 - CLI (`warden scan <path>`) - colorized terminal output, `--fail-on <severity>` for CI gating,
-  `--upload` to push results to the dashboard
+  `--upload` to push results to the dashboard, `--format json|sarif` for machine-readable output
+  (the latter for GitHub's Code Scanning)
 - `action.yml` - a composite GitHub Action wrapping the CLI
 - Scan ingestion API (`POST /api/v1/scans`) - authenticated by a per-org API token (SHA-256
   hashed, shown once at creation), auto-creates the repo on first upload, computes severity
@@ -229,6 +230,12 @@ npm run smoke        # end-to-end smoke test against a real running server (npm 
 - [x] divide-before-multiply detector (21st detector) - flags a division whose result feeds
       straight into a multiplication (`(a / b) * c`), which compounds Solidity's integer
       truncation instead of reordering to divide last; 30/30 exact match on the fixture corpus
+- [x] `warden scan --format sarif` - SARIF 2.1.0 output for GitHub's Code Scanning
+      (`upload-sarif` action), so a finding can show up as an inline PR annotation instead of
+      only living in warden's own dashboard. Rules list carries every registered detector, not
+      just the ones that fired, so GitHub can show a rule's description even at zero findings.
+      Live-verified against a real fixture scan: valid 2.1.0 document, correct rule id/level/
+      location
 - [ ] More detectors
 
 ## License

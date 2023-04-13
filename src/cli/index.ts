@@ -8,11 +8,12 @@ import { findSolidityFiles } from "../lib/find-solidity-files";
 import { loadConfig } from "./config";
 import { countBySeverity, formatResults, formatResultsJson } from "./format";
 import { wardenWorkflowTemplate } from "./init-template";
+import { formatResultsSarif } from "./sarif";
 import { meetsThreshold } from "./severity";
 import { uploadResults } from "./upload";
 
 const SEVERITIES: Severity[] = ["critical", "high", "medium", "low", "info"];
-const FORMATS = ["text", "json"] as const;
+const FORMATS = ["text", "json", "sarif"] as const;
 
 // A real .sol file is a few KB to a few hundred KB at most - this is
 // generous headroom above that, not a tight fit. Scanning is meant to
@@ -32,7 +33,7 @@ program
   .option("--fail-on <severity>", `exit non-zero if a finding at or above this severity exists (${SEVERITIES.join("|")}) (falls back to warden.config.json, then "critical")`)
   .option("--no-fail", "always exit 0, regardless of findings")
   .option("--no-color", "disable ANSI color in output")
-  .option("--format <text|json>", "output format", "text")
+  .option("--format <text|json|sarif>", "output format - sarif is for GitHub's Code Scanning (upload-sarif action)", "text")
   .option("--upload", "upload results to the Warden dashboard (requires --repo, --token or WARDEN_TOKEN)")
   .option("--repo <slug>", "repo slug to upload against (falls back to warden.config.json)")
   .option("--token <token>", "API token (falls back to WARDEN_TOKEN env var)")
@@ -56,6 +57,11 @@ program
       return;
     }
     const isJson = format === "json";
+    const isSarif = format === "sarif";
+    // Both machine-readable formats print exactly one document to stdout
+    // at the end - no interleaved human-readable prose a consumer piping
+    // stdout into `jq` or a SARIF uploader would have to strip out first.
+    const isStructured = isJson || isSarif;
 
     const repoSlug = (opts.repo ?? config.repo) as string | undefined;
 
@@ -82,20 +88,19 @@ program
       }
     });
 
-    if (!isJson) console.log(formatResults(results, opts.color !== false));
+    if (!isStructured) console.log(formatResults(results, opts.color !== false));
 
-    // In JSON mode, everything (results, counts, and upload outcome)
-    // lands in the one JSON object printed at the end, rather than
-    // interleaving prose with machine-readable output - a consumer
-    // piping stdout into `jq` shouldn't have to strip anything out first.
     let uploadOutcome: { scanId: number; blocked: boolean } | { error: string } | undefined;
 
     if (opts.upload) {
       const token = opts.token ?? process.env.WARDEN_TOKEN;
       if (!token || !repoSlug) {
         const message = "--upload requires --repo (or a repo in warden.config.json) and a token (--token or WARDEN_TOKEN)";
-        if (isJson) {
+        if (isStructured) {
           uploadOutcome = { error: message };
+          // SARIF has no field for this - a GitHub Actions log line is the
+          // only place it can surface without corrupting the SARIF upload.
+          if (isSarif) console.error(message);
         } else {
           console.error(message);
           process.exitCode = 2;
@@ -111,11 +116,12 @@ program
             branch: opts.branch,
           });
           uploadOutcome = uploaded;
-          if (!isJson) console.log(`\nuploaded as scan #${uploaded.scanId}${uploaded.blocked ? " - dashboard marks this blocked" : ""}`);
+          if (!isStructured) console.log(`\nuploaded as scan #${uploaded.scanId}${uploaded.blocked ? " - dashboard marks this blocked" : ""}`);
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           uploadOutcome = { error: message };
-          if (!isJson) {
+          if (isSarif) console.error(`\nupload failed: ${message}`);
+          if (!isStructured) {
             console.error(`\nupload failed: ${message}`);
             process.exitCode = 1;
             return;
@@ -127,6 +133,8 @@ program
     if (isJson) {
       const summary = JSON.parse(formatResultsJson(results));
       console.log(JSON.stringify({ ...summary, upload: uploadOutcome }, null, 2));
+    } else if (isSarif) {
+      console.log(formatResultsSarif(results));
     }
 
     if (uploadOutcome && "error" in uploadOutcome) {
