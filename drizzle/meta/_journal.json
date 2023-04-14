@@ -50,6 +50,13 @@
       "when": 1790259299968,
       "tag": "0006_wakeful_strong_guy",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791006037285,
+      "tag": "0007_dusty_guardian",
+      "breakpoints": true
     }
   ]
 }

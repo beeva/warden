@@ -99,6 +99,10 @@ export const apiTokens = pgTable("api_tokens", {
   createdByUserId: integer("created_by_user_id").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   lastUsedAt: timestamp("last_used_at"),
+  // Null means "never expires" - a long-lived CI token is a legitimate
+  // choice, so this is opt-in at creation time rather than a mandatory
+  // TTL every token is forced into.
+  expiresAt: timestamp("expires_at"),
 });
 
 export const scans = pgTable("scans", {

@@ -211,8 +211,8 @@ export async function listWebhookDeliveriesForRepo(repoId: number, limit = 20) {
   return db.select().from(webhookDeliveries).where(eq(webhookDeliveries.repoId, repoId)).orderBy(desc(webhookDeliveries.createdAt)).limit(limit);
 }
 
-export async function createApiToken(orgId: number, tokenHash: string, label: string, createdByUserId: number) {
-  const [token] = await db.insert(apiTokens).values({ orgId, tokenHash, label, createdByUserId }).returning();
+export async function createApiToken(orgId: number, tokenHash: string, label: string, createdByUserId: number, expiresAt: Date | null = null) {
+  const [token] = await db.insert(apiTokens).values({ orgId, tokenHash, label, createdByUserId, expiresAt }).returning();
   if (!token) throw new Error("failed to create api token");
   return token;
 }
@@ -228,7 +228,7 @@ export async function touchApiTokenLastUsed(tokenId: number) {
 
 export async function listApiTokensForOrg(orgId: number) {
   return db
-    .select({ id: apiTokens.id, label: apiTokens.label, createdAt: apiTokens.createdAt, lastUsedAt: apiTokens.lastUsedAt })
+    .select({ id: apiTokens.id, label: apiTokens.label, createdAt: apiTokens.createdAt, lastUsedAt: apiTokens.lastUsedAt, expiresAt: apiTokens.expiresAt })
     .from(apiTokens)
     .where(eq(apiTokens.orgId, orgId))
     .orderBy(desc(apiTokens.createdAt));

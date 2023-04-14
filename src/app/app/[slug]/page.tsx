@@ -115,7 +115,16 @@ export default async function OrgPage({ params }: { params: Promise<{ slug: stri
       {isOwner ? (
         <InvitesCard slug={slug} invites={invites.map((i) => ({ ...i, expiresAt: i.expiresAt.toISOString(), createdAt: i.createdAt.toISOString() }))} />
       ) : null}
-      <TokensCard slug={slug} tokens={tokens.map((t) => ({ ...t, createdAt: t.createdAt.toISOString(), lastUsedAt: t.lastUsedAt?.toISOString() ?? null }))} isOwner={isOwner} />
+      <TokensCard
+        slug={slug}
+        tokens={tokens.map((t) => ({
+          ...t,
+          createdAt: t.createdAt.toISOString(),
+          lastUsedAt: t.lastUsedAt?.toISOString() ?? null,
+          expiresAt: t.expiresAt?.toISOString() ?? null,
+        }))}
+        isOwner={isOwner}
+      />
       {isOwner ? <SlackSettingsCard slug={slug} connected={!!resolved.org.slackWebhookUrl} /> : null}
       {isOwner ? <OrgDangerZoneCard slug={slug} /> : null}
       </main>

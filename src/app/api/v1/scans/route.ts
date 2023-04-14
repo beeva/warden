@@ -41,11 +41,16 @@ async function authenticate(request: NextRequest) {
   if (!raw) return null;
 
   const token = await getApiTokenByHash(hashApiToken(raw));
+  if (!token) return null;
+  if (token.expiresAt && token.expiresAt.getTime() <= Date.now()) return "expired";
   return token;
 }
 
 export const POST = withErrorHandling(async (request: NextRequest) => {
   const token = await authenticate(request);
+  if (token === "expired") {
+    return NextResponse.json({ error: "API token has expired" }, { status: 401 });
+  }
   if (!token) {
     return NextResponse.json({ error: "missing or invalid API token" }, { status: 401 });
   }

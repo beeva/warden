@@ -23,7 +23,12 @@ export const GET = withErrorHandling(async (_request: Request, { params }: { par
   return NextResponse.json({ tokens });
 });
 
-const bodySchema = z.object({ label: z.string().trim().min(1).max(100) });
+const bodySchema = z.object({
+  label: z.string().trim().min(1).max(100),
+  // Opt-in - omitted or null means the token never expires, same as
+  // every token created before this field existed.
+  expiresInDays: z.number().int().min(1).max(3650).nullable().optional(),
+});
 
 // Owner-only, same as every other credential-issuing action - a token
 // scopes to the whole org's repos, so a plain member minting one would be
@@ -56,12 +61,17 @@ export const POST = withErrorHandling(async (request: Request, { params }: { par
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "invalid input" }, { status: 400 });
   }
 
+  const expiresAt = parsed.data.expiresInDays ? new Date(Date.now() + parsed.data.expiresInDays * 24 * 60 * 60 * 1000) : null;
+
   const { raw: rawToken, hash } = generateApiToken();
-  const token = await createApiToken(resolved.org.id, hash, parsed.data.label, session.userId);
+  const token = await createApiToken(resolved.org.id, hash, parsed.data.label, session.userId, expiresAt);
   await logAudit({ orgId: resolved.org.id, actorUserId: session.userId, action: "token.created", targetType: "api_token", targetId: token.id });
 
   // The only point in this token's life the raw value is ever returned -
   // only the hash is stored, so this response is the caller's one chance
   // to copy it down.
-  return NextResponse.json({ token: { id: token.id, label: token.label, createdAt: token.createdAt, raw: rawToken } }, { status: 201 });
+  return NextResponse.json(
+    { token: { id: token.id, label: token.label, createdAt: token.createdAt, expiresAt: token.expiresAt, raw: rawToken } },
+    { status: 201 }
+  );
 });

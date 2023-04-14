@@ -236,6 +236,11 @@ npm run smoke        # end-to-end smoke test against a real running server (npm 
       just the ones that fired, so GitHub can show a rule's description even at zero findings.
       Live-verified against a real fixture scan: valid 2.1.0 document, correct rule id/level/
       location
+- [x] Optional API token expiration (`expiresInDays` at creation - 30/90/365 days or never) -
+      opt-in, so a long-lived CI token is still a choice rather than a forced TTL. Checked at
+      the same auth point every upload already goes through. Live-verified against the real
+      server and Postgres: an upload with a backdated-expired token gets a 401, the same token
+      before backdating (and a never-expiring one) upload successfully
 - [ ] More detectors
 
 ## License
