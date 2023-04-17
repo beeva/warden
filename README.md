@@ -241,6 +241,10 @@ npm run smoke        # end-to-end smoke test against a real running server (npm 
       the same auth point every upload already goes through. Live-verified against the real
       server and Postgres: an upload with a backdated-expired token gets a 401, the same token
       before backdating (and a never-expiring one) upload successfully
+- [x] unchecked-arithmetic-block detector (22nd detector) - flags a subtraction or decrement
+      inside an `unchecked { ... }` block, which opts out of Solidity 0.8's default underflow
+      revert. Scoped to subtraction only, never `+`/`++`, so the common gas-saving
+      unchecked-loop-counter idiom stays unflagged; 32/32 exact match on the fixture corpus
 - [ ] More detectors
 
 ## License

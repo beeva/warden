@@ -14,6 +14,7 @@ import { timestampDependenceDetector } from "./rules/timestamp-dependence";
 import { txOriginAsRecipientDetector } from "./rules/tx-origin-as-recipient";
 import { txOriginAuthDetector } from "./rules/tx-origin-auth";
 import { unboundedLoopDetector } from "./rules/unbounded-loop";
+import { uncheckedArithmeticBlockDetector } from "./rules/unchecked-arithmetic-block";
 import { uncheckedCallDetector } from "./rules/unchecked-call";
 import { uncheckedErc20TransferDetector } from "./rules/unchecked-erc20-transfer";
 import { unprotectedInitializerDetector } from "./rules/unprotected-initializer";
@@ -43,6 +44,7 @@ export const detectorRegistry: Detector[] = [
   txOriginAsRecipientDetector,
   ecrecoverZeroAddressDetector,
   divideBeforeMultiplyDetector,
+  uncheckedArithmeticBlockDetector,
 ];
 
 export function getDetector(id: string): Detector | undefined {
