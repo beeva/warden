@@ -12,6 +12,7 @@ import { LeaveOrgButton } from "./leave-org-button";
 import { MembersCard } from "./members-card";
 import { OrgDangerZoneCard } from "./org-danger-zone-card";
 import { RepoCreateForm } from "./repo-create-form";
+import { NotifyWebhookSettingsCard } from "./notify-webhook-settings-card";
 import { SlackSettingsCard } from "./slack-settings-card";
 import { TokensCard } from "./tokens-card";
 
@@ -126,6 +127,7 @@ export default async function OrgPage({ params }: { params: Promise<{ slug: stri
         isOwner={isOwner}
       />
       {isOwner ? <SlackSettingsCard slug={slug} connected={!!resolved.org.slackWebhookUrl} /> : null}
+      {isOwner ? <NotifyWebhookSettingsCard slug={slug} connected={!!resolved.org.notifyWebhookUrl} /> : null}
       {isOwner ? <OrgDangerZoneCard slug={slug} /> : null}
       </main>
     </>

@@ -57,6 +57,13 @@
       "when": 1791006037285,
       "tag": "0007_dusty_guardian",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791006526762,
+      "tag": "0008_odd_bloodstorm",
+      "breakpoints": true
     }
   ]
 }

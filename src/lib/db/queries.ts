@@ -44,6 +44,10 @@ export async function setOrgSlackWebhookUrl(orgId: number, slackWebhookUrl: stri
   await db.update(orgs).set({ slackWebhookUrl }).where(eq(orgs.id, orgId));
 }
 
+export async function setOrgNotifyWebhook(orgId: number, notifyWebhookUrl: string | null, notifyWebhookSecret: string | null) {
+  await db.update(orgs).set({ notifyWebhookUrl, notifyWebhookSecret }).where(eq(orgs.id, orgId));
+}
+
 /** Cascades to every repo (and each repo's own scans/findings/webhook deliveries), member, API token, and invite for this org - the single most destructive action in the product. */
 export async function deleteOrg(orgId: number) {
   await db.delete(orgs).where(eq(orgs.id, orgId));

@@ -22,6 +22,13 @@ export const orgs = pgTable("orgs", {
   // it can post as this integration) - stored as an org-level setting,
   // not per-user, since a blocked scan is an org-wide event.
   slackWebhookUrl: text("slack_webhook_url"),
+  // A generic outbound webhook for anything Slack doesn't cover (a
+  // custom Discord/Teams relay, an internal incident pipeline). Unlike
+  // the Slack URL, this one is signed on every delivery (notifyWebhookSecret),
+  // so the receiving endpoint doesn't have to treat a bare URL as the
+  // whole credential the way an incoming Slack webhook does.
+  notifyWebhookUrl: text("notify_webhook_url"),
+  notifyWebhookSecret: text("notify_webhook_secret"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

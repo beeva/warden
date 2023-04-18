@@ -87,7 +87,8 @@ should be checking on every single commit, not a human once a quarter.
   counts and a `blocked` flag (against each repo's own configurable `failThreshold`) the CLI/Action
   use to decide the exit code
 - Optional Slack notification (an org-level incoming webhook, `https://` enforced) posted whenever
-  a scan crosses its repo's threshold
+  a scan crosses its repo's threshold, plus a generic signed outbound webhook for anything Slack
+  doesn't cover
 - Dashboard - orgs, repos, scan history, and a findings table where any member can triage status
   (open/acknowledged/false_positive/fixed) - every scan and status change lands in an audit log
 
@@ -245,6 +246,12 @@ npm run smoke        # end-to-end smoke test against a real running server (npm 
       inside an `unchecked { ... }` block, which opts out of Solidity 0.8's default underflow
       revert. Scoped to subtraction only, never `+`/`++`, so the common gas-saving
       unchecked-loop-counter idiom stays unflagged; 32/32 exact match on the fixture corpus
+- [x] Generic outbound webhook notification - a signed POST (HMAC-SHA256, same scheme this app
+      already verifies on the inbound GitHub side) to any https:// URL on a blocked scan, for
+      anything Slack doesn't cover. Secret is minted server-side on connect and shown once, like
+      an API token. Live-verified against the real server, Postgres, and a real local HTTP
+      receiver: a genuinely blocking scan upload delivered the real payload with a signature that
+      an independently-computed HMAC over the same body matched exactly
 - [ ] More detectors
 
 ## License

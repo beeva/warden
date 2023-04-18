@@ -1,6 +1,7 @@
 import { completeScan, createScan, getOrgById, insertFindings, logAudit } from "@/lib/db/queries";
 import type { Repo, ScanSource, Severity } from "@/lib/db/schema";
 import { formatBlockedScanMessage, sendSlackNotification } from "@/lib/notify/slack";
+import { sendWebhookNotification } from "@/lib/notify/webhook";
 import { meetsThreshold } from "@/lib/severity";
 
 export interface RecordableFinding {
@@ -86,18 +87,28 @@ export async function recordScan(input: RecordScanInput): Promise<RecordScanResu
 
   if (blocked) {
     const org = await getOrgById(input.orgId);
-    if (org?.slackWebhookUrl) {
+    if (org) {
       const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3522";
-      await sendSlackNotification(
-        org.slackWebhookUrl,
-        formatBlockedScanMessage({
-          orgName: org.name,
-          repoName: input.repo.name,
+      const dashboardUrl = `${appUrl}/app/${org.slug}/${input.repo.slug}/scans/${scan.id}`;
+
+      if (org.slackWebhookUrl) {
+        await sendSlackNotification(
+          org.slackWebhookUrl,
+          formatBlockedScanMessage({ orgName: org.name, repoName: input.repo.name, scanId: scan.id, counts, dashboardUrl })
+        );
+      }
+
+      if (org.notifyWebhookUrl && org.notifyWebhookSecret) {
+        await sendWebhookNotification(org.notifyWebhookUrl, org.notifyWebhookSecret, {
+          event: "scan.blocked",
+          org: org.slug,
+          repo: input.repo.slug,
           scanId: scan.id,
           counts,
-          dashboardUrl: `${appUrl}/app/${org.slug}/${input.repo.slug}/scans/${scan.id}`,
-        })
-      );
+          dashboardUrl,
+          timestamp: new Date().toISOString(),
+        });
+      }
     }
   }
 
