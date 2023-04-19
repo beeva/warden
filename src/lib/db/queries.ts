@@ -315,11 +315,23 @@ export async function insertFindings(
   await db.insert(findings).values(rows.map((r) => ({ scanId, ...r })));
 }
 
-export async function listFindingsForScan(scanId: number, limit = 50, offset = 0) {
+export interface FindingFilter {
+  severity?: Severity;
+  ruleId?: string;
+}
+
+function findingFilterConditions(scanId: number, filter?: FindingFilter) {
+  const conditions = [eq(findings.scanId, scanId)];
+  if (filter?.severity) conditions.push(eq(findings.severity, filter.severity));
+  if (filter?.ruleId) conditions.push(eq(findings.ruleId, filter.ruleId));
+  return and(...conditions);
+}
+
+export async function listFindingsForScan(scanId: number, limit = 50, offset = 0, filter?: FindingFilter) {
   return db
     .select()
     .from(findings)
-    .where(eq(findings.scanId, scanId))
+    .where(findingFilterConditions(scanId, filter))
     .orderBy(findings.severity, findings.filePath, findings.line)
     .limit(limit)
     .offset(offset);
@@ -335,9 +347,15 @@ export async function listAllFindingsForScan(scanId: number) {
   return db.select().from(findings).where(eq(findings.scanId, scanId)).orderBy(findings.severity, findings.filePath, findings.line);
 }
 
-export async function countFindingsForScan(scanId: number): Promise<number> {
-  const [row] = await db.select({ count: sql<number>`count(*)::int` }).from(findings).where(eq(findings.scanId, scanId));
+export async function countFindingsForScan(scanId: number, filter?: FindingFilter): Promise<number> {
+  const [row] = await db.select({ count: sql<number>`count(*)::int` }).from(findings).where(findingFilterConditions(scanId, filter));
   return row?.count ?? 0;
+}
+
+/** Every distinct ruleId present in this scan's findings - used to populate the rule filter dropdown with only rules that actually fired, rather than the full detector registry. */
+export async function listDistinctRuleIdsForScan(scanId: number): Promise<string[]> {
+  const rows = await db.selectDistinct({ ruleId: findings.ruleId }).from(findings).where(eq(findings.scanId, scanId)).orderBy(findings.ruleId);
+  return rows.map((r) => r.ruleId);
 }
 
 export async function getFindingById(findingId: number) {

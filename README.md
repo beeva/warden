@@ -252,6 +252,11 @@ npm run smoke        # end-to-end smoke test against a real running server (npm 
       an API token. Live-verified against the real server, Postgres, and a real local HTTP
       receiver: a genuinely blocking scan upload delivered the real payload with a signature that
       an independently-computed HMAC over the same body matched exactly
+- [x] Severity and rule filters on a scan's findings table - real server-side filtering (not a
+      client-side slice), combined with the existing pagination, which now carries any active
+      filter across page links instead of silently dropping it. Live-verified against the real
+      server and Postgres: a scan with mixed severities/rules filtered down to the exact expected
+      count for each of severity, ruleId, and a filter combination with zero matches
 - [ ] More detectors
 
 ## License

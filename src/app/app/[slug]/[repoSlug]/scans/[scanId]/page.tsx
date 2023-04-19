@@ -7,10 +7,12 @@ import {
   getPreviousScan,
   getRepoBySlug,
   getScanById,
+  listDistinctRuleIdsForScan,
   listFindingKeysForScan,
   listFindingsForScan,
 } from "@/lib/db/queries";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Pagination, parsePage } from "@/components/ui/pagination";
 import { formatDate } from "@/lib/utils";
@@ -26,6 +28,8 @@ const SEVERITY_TONE: Record<Severity, "critical" | "high" | "medium" | "low" | "
   info: "info",
 };
 
+const SEVERITIES: Severity[] = ["critical", "high", "medium", "low", "info"];
+
 const PAGE_SIZE = 50;
 
 export default async function ScanPage({
@@ -33,10 +37,14 @@ export default async function ScanPage({
   searchParams,
 }: {
   params: Promise<{ slug: string; repoSlug: string; scanId: string }>;
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; severity?: string; ruleId?: string }>;
 }) {
   const { slug, repoSlug, scanId } = await params;
-  const page = parsePage((await searchParams).page);
+  const rawSearchParams = await searchParams;
+  const page = parsePage(rawSearchParams.page);
+  const severity = SEVERITIES.includes(rawSearchParams.severity as Severity) ? (rawSearchParams.severity as Severity) : undefined;
+  const ruleId = rawSearchParams.ruleId?.trim() || undefined;
+  const filter = { severity, ruleId };
   const session = await getSession();
   if (!session) redirect("/login");
 
@@ -50,12 +58,14 @@ export default async function ScanPage({
   const scan = Number.isInteger(id) ? await getScanById(id) : null;
   if (!scan || scan.repoId !== repo.id) notFound();
 
-  const [findings, totalFindings, previousScan] = await Promise.all([
-    listFindingsForScan(scan.id, PAGE_SIZE, (page - 1) * PAGE_SIZE),
-    countFindingsForScan(scan.id),
+  const [findings, totalFindings, previousScan, ruleIds] = await Promise.all([
+    listFindingsForScan(scan.id, PAGE_SIZE, (page - 1) * PAGE_SIZE, filter),
+    countFindingsForScan(scan.id, filter),
     getPreviousScan(repo.id, scan.startedAt),
+    listDistinctRuleIdsForScan(scan.id),
   ]);
   const totalPages = Math.max(1, Math.ceil(totalFindings / PAGE_SIZE));
+  const isFiltered = !!severity || !!ruleId;
 
   const diff = previousScan
     ? diffScans(await listFindingKeysForScan(previousScan.id), await listFindingKeysForScan(scan.id))
@@ -91,16 +101,60 @@ export default async function ScanPage({
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Findings ({totalFindings})</CardTitle>
-            {totalFindings > 0 ? (
-              <a href={`/api/orgs/${slug}/scans/${scan.id}/export`} className="text-xs text-cobalt-400 hover:text-cobalt-300">
-                Export CSV
-              </a>
-            ) : null}
+            <a href={`/api/orgs/${slug}/scans/${scan.id}/export`} className="text-xs text-cobalt-400 hover:text-cobalt-300">
+              Export CSV (all findings)
+            </a>
           </div>
         </CardHeader>
         <CardContent>
+          <form method="get" className="mb-4 flex flex-wrap items-end gap-3">
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-steel-400" htmlFor="severity">
+                Severity
+              </label>
+              <select
+                id="severity"
+                name="severity"
+                defaultValue={severity ?? ""}
+                className="rounded-md border border-steel-700 bg-steel-900 px-2 py-1 text-xs text-steel-200"
+              >
+                <option value="">All</option>
+                {SEVERITIES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-steel-400" htmlFor="ruleId">
+                Rule
+              </label>
+              <select
+                id="ruleId"
+                name="ruleId"
+                defaultValue={ruleId ?? ""}
+                className="rounded-md border border-steel-700 bg-steel-900 px-2 py-1 text-xs text-steel-200"
+              >
+                <option value="">All</option>
+                {ruleIds.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Button type="submit" variant="outline" size="sm">
+              Filter
+            </Button>
+            {isFiltered ? (
+              <Link href={`/app/${slug}/${repoSlug}/scans/${scan.id}`} className="text-xs text-steel-400 hover:text-cobalt-400">
+                Clear filters
+              </Link>
+            ) : null}
+          </form>
           {findings.length === 0 ? (
-            <p className="text-sm text-mint-400">No findings in this scan.</p>
+            <p className="text-sm text-mint-400">{isFiltered ? "No findings match this filter." : "No findings in this scan."}</p>
           ) : (
             <div className="scrollbar-thin overflow-x-auto">
               <table className="w-full text-left text-sm">
@@ -135,7 +189,12 @@ export default async function ScanPage({
               </table>
             </div>
           )}
-          <Pagination basePath={`/app/${slug}/${repoSlug}/scans/${scan.id}`} page={page} totalPages={totalPages} />
+          <Pagination
+            basePath={`/app/${slug}/${repoSlug}/scans/${scan.id}`}
+            page={page}
+            totalPages={totalPages}
+            extraParams={{ severity, ruleId }}
+          />
         </CardContent>
       </Card>
     </main>
