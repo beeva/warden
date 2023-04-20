@@ -257,6 +257,11 @@ npm run smoke        # end-to-end smoke test against a real running server (npm 
       filter across page links instead of silently dropping it. Live-verified against the real
       server and Postgres: a scan with mixed severities/rules filtered down to the exact expected
       count for each of severity, ruleId, and a filter combination with zero matches
+- [x] CLI `--exclude <dirs>` - one-off directory excludes on top of (not instead of)
+      warden.config.json's own exclude list, for a quick local run without editing the config
+      file. Live-verified against a real temp directory: no exclude scans both a vendored and a
+      top-level copy of the same file, `--exclude vendor` drops the vendored one, and combined
+      with a config exclude for a different directory both are honored together
 - [ ] More detectors
 
 ## License

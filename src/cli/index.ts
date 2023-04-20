@@ -36,6 +36,7 @@ program
   .option("--format <text|json|sarif>", "output format - sarif is for GitHub's Code Scanning (upload-sarif action)", "text")
   .option("--upload", "upload results to the Warden dashboard (requires --repo, --token or WARDEN_TOKEN)")
   .option("--repo <slug>", "repo slug to upload against (falls back to warden.config.json)")
+  .option("--exclude <dirs>", "comma-separated directory names to skip, on top of warden.config.json's exclude list")
   .option("--token <token>", "API token (falls back to WARDEN_TOKEN env var)")
   .option("--api-url <url>", "dashboard API base URL", process.env.WARDEN_API_URL ?? "http://localhost:3522")
   .option("--commit <sha>", "commit SHA to associate with this scan")
@@ -65,7 +66,10 @@ program
 
     const repoSlug = (opts.repo ?? config.repo) as string | undefined;
 
-    const files = findSolidityFiles(targetPath, config.exclude ?? []);
+    const cliExcludes = typeof opts.exclude === "string" ? opts.exclude.split(",").map((s: string) => s.trim()).filter(Boolean) : [];
+    const excludes = [...new Set([...(config.exclude ?? []), ...cliExcludes])];
+
+    const files = findSolidityFiles(targetPath, excludes);
     if (files.length === 0) {
       console.error(`no .sol files found under ${targetPath}`);
       process.exitCode = 2;
