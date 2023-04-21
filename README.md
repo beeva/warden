@@ -262,6 +262,11 @@ npm run smoke        # end-to-end smoke test against a real running server (npm 
       file. Live-verified against a real temp directory: no exclude scans both a vendored and a
       top-level copy of the same file, `--exclude vendor` drops the vendored one, and combined
       with a config exclude for a different directory both are honored together
+- [x] msg-value-in-loop detector (23rd detector) - flags `msg.value` read inside a `for`/`while`/
+      `do-while` loop body. msg.value is fixed for the whole transaction, not a per-iteration
+      amount - reusing it inside a loop (instead of computing a share once beforehand) has shown
+      up for real as a way to drain far more than was actually sent in. 34/34 exact match on the
+      fixture corpus
 - [ ] More detectors
 
 ## License

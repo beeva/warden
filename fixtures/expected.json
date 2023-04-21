@@ -15,6 +15,7 @@
   { "file": "vulnerable/unchecked-ecrecover.sol", "expectedRuleIds": ["signature-replay-risk", "ecrecover-unchecked-zero-address"] },
   { "file": "vulnerable/precision-loss-fee.sol", "expectedRuleIds": ["divide-before-multiply"] },
   { "file": "vulnerable/unchecked-withdraw.sol", "expectedRuleIds": ["unchecked-arithmetic-block"] },
+  { "file": "vulnerable/loop-msg-value.sol", "expectedRuleIds": ["msg-value-in-loop"] },
   { "file": "safe/vault-guarded.sol", "expectedRuleIds": [] },
   { "file": "safe/access-controlled.sol", "expectedRuleIds": [] },
   { "file": "safe/fixed-proxy.sol", "expectedRuleIds": [] },
@@ -30,5 +31,6 @@
   { "file": "safe/sender-recipient.sol", "expectedRuleIds": [] },
   { "file": "safe/checked-ecrecover.sol", "expectedRuleIds": [] },
   { "file": "safe/precision-safe-fee.sol", "expectedRuleIds": [] },
-  { "file": "safe/unchecked-loop-counter.sol", "expectedRuleIds": [] }
+  { "file": "safe/unchecked-loop-counter.sol", "expectedRuleIds": [] },
+  { "file": "safe/precomputed-share.sol", "expectedRuleIds": [] }
 ]

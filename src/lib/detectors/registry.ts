@@ -7,6 +7,7 @@ import { floatingPragmaDetector } from "./rules/floating-pragma";
 import { hashCollisionEncodePackedDetector } from "./rules/hash-collision-encode-packed";
 import { lockedEtherDetector } from "./rules/locked-ether";
 import { missingZeroAddressCheckDetector } from "./rules/missing-zero-address-check";
+import { msgValueInLoopDetector } from "./rules/msg-value-in-loop";
 import { reentrancyDetector } from "./rules/reentrancy";
 import { signatureReplayDetector } from "./rules/signature-replay";
 import { strictBalanceEqualityDetector } from "./rules/strict-balance-equality";
@@ -45,6 +46,7 @@ export const detectorRegistry: Detector[] = [
   ecrecoverZeroAddressDetector,
   divideBeforeMultiplyDetector,
   uncheckedArithmeticBlockDetector,
+  msgValueInLoopDetector,
 ];
 
 export function getDetector(id: string): Detector | undefined {
